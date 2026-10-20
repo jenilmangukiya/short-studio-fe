@@ -2,11 +2,13 @@
 
 import { use, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AuthGuard } from "@/components/AuthGuard";
-import { StepTimeline } from "@/components/StepTimeline";
+import { StepStepper } from "@/components/StepStepper";
+import { StepDetailPanel } from "@/components/StepDetailPanel";
 import { api, formatErrorMessage } from "@/lib/api";
-import type { VideoStatus } from "@/lib/types";
+import { PIPELINE_STEP_NAMES, type PipelineStepName, type VideoStatus } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -53,8 +55,36 @@ function getStatusBadge(status: string) {
 
 function VideoDetailContent({ videoId }: { videoId: string }) {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [actionError, setActionError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+
+  // URL step param initialization:
+  // On load: valid ?step= means follow mode is OFF; missing or invalid means follow mode is ON.
+  const initialStepParam = searchParams.get("step");
+  const isValidInitialStep = Boolean(
+    initialStepParam && PIPELINE_STEP_NAMES.includes(initialStepParam as PipelineStepName)
+  );
+
+  const [isFollowing, setIsFollowing] = useState<boolean>(() => !isValidInitialStep);
+  const [selectedStepName, setSelectedStepName] = useState<string | null>(() =>
+    isValidInitialStep ? initialStepParam : null
+  );
+
+  // URL query sync helpers
+  const setStepInUrl = (stepName: string) => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("step", stepName);
+    window.history.replaceState(null, "", url.toString());
+  };
+
+  const removeStepFromUrl = () => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("step");
+    window.history.replaceState(null, "", url.pathname + (url.search ? url.search : ""));
+  };
 
   // TanStack Query with dynamic polling: poll every 2s ONLY while any step has status 'running'
   const {
@@ -117,17 +147,48 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
     onError: (err) => setActionError(formatErrorMessage(err)),
   });
 
-  // Step state calculations
+  // Step calculations
   const steps = video?.steps || [];
   const sortedSteps = [...steps].sort((a, b) => a.position - b.position);
   const isAnyRunning = steps.some((s) => s.status === "running");
   const allDone = steps.length > 0 && steps.every((s) => s.status === "done");
   const hasStarted = steps.length > 0;
 
-  // Find next step to run (first step not 'done')
-  const nextStepToRun = sortedSteps.find((s) => s.status !== "done");
-  const isNextStepFailed = nextStepToRun?.status === "failed";
+  // "Current step" = first step that is not done; if all are done, the last step
+  const currentStep = sortedSteps.find((s) => s.status !== "done") || sortedSteps[sortedSteps.length - 1];
+  const currentStepName = currentStep?.name || "script";
+
+  // Derive shownStep without useEffect:
+  // shownStep = isFollowing ? currentStep.name : selectedStepName
+  const shownStepName = isFollowing ? currentStepName : (selectedStepName || currentStepName);
+  const selectedStep =
+    sortedSteps.find((s) => s.name === shownStepName) || currentStep || sortedSteps[0];
+
+  // Check if any step in pipeline has failed
+  const failedStep = sortedSteps.find((s) => s.status === "failed");
+
+  // Determine label for main pipeline button (Next step vs Retry step)
+  const isNextStepFailed = currentStep?.status === "failed";
   const nextButtonLabel = isNextStepFailed ? "Retry step" : "Next step";
+
+  // Selection handlers
+  const handleSelectStep = (stepName: string) => {
+    setIsFollowing(false);
+    setSelectedStepName(stepName);
+    setStepInUrl(stepName);
+  };
+
+  const handleGoToCurrent = () => {
+    setIsFollowing(true);
+    setSelectedStepName(null);
+    removeStepFromUrl();
+  };
+
+  const handleSelectFailedStep = (failedStepName: string) => {
+    setIsFollowing(false);
+    setSelectedStepName(failedStepName);
+    setStepInUrl(failedStepName);
+  };
 
   // File download handler
   const handleDownload = async () => {
@@ -165,7 +226,10 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
         </Link>
         <span>/</span>
         {channel ? (
-          <Link href={`/channels/${channel.id}`} className="hover:text-indigo-600 transition truncate max-w-xs">
+          <Link
+            href={`/channels/${channel.id}`}
+            className="hover:text-indigo-600 transition truncate max-w-xs"
+          >
             {channel.name}
           </Link>
         ) : (
@@ -179,13 +243,13 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
 
       {/* Main Error Alert */}
       {(error || actionError) && (
-        <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 flex items-start justify-between gap-2">
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 flex items-start justify-between gap-2 shadow-2xs">
           <span>{formatErrorMessage(error || actionError)}</span>
           {actionError && (
             <button
               type="button"
               onClick={() => setActionError(null)}
-              className="text-red-400 hover:text-red-600 font-bold"
+              className="text-red-400 hover:text-red-600 font-bold cursor-pointer"
             >
               &times;
             </button>
@@ -203,8 +267,8 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
 
       {video && (
         <>
-          {/* Header Card */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+          {/* Header Card with Whole-Pipeline Controls */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
@@ -238,9 +302,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                   >
                     <span>📥</span>
                     <span>
-                      {downloading
-                        ? "Downloading..."
-                        : "Download output (placeholder file)"}
+                      {downloading ? "Downloading..." : "Download output (placeholder file)"}
                     </span>
                   </button>
                 </div>
@@ -263,7 +325,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                   <span>
                     Ready for next execution:{" "}
                     <strong className="text-slate-800 capitalize">
-                      {nextStepToRun?.name || "None"}
+                      {currentStep?.name || "None"}
                     </strong>
                   </span>
                 ) : (
@@ -311,45 +373,70 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
             </div>
           </div>
 
-          {/* Timeline Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-1">
-              <h2 className="text-base font-bold text-slate-800">
-                Pipeline Steps ({steps.length})
-              </h2>
-              {hasStarted && (
-                <span className="text-xs text-slate-500 font-medium">
-                  {steps.filter((s) => s.status === "done").length} of {steps.length} done
-                </span>
+          {/* Failed-Step Error Summary Banner (Above Stepper) */}
+          {failedStep && (
+            <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-xs text-red-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs">
+              <div className="flex items-start gap-2.5">
+                <span className="text-base text-red-600 font-bold">⚠️</span>
+                <div>
+                  <span className="font-bold text-red-950">Step execution failed: </span>
+                  <span>
+                    Step <strong className="capitalize">&ldquo;{failedStep.name}&rdquo;</strong> encountered an error
+                    {failedStep.error ? `: ${failedStep.error}` : "."}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSelectFailedStep(failedStep.name)}
+                className="shrink-0 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition cursor-pointer self-start sm:self-center"
+              >
+                View failed step &rarr;
+              </button>
+            </div>
+          )}
+
+          {/* Pipeline Stepper & Single Detail Panel */}
+          {!hasStarted ? (
+            <div className="text-center py-14 px-4 bg-white rounded-2xl border border-dashed border-slate-300">
+              <div className="text-3xl mb-3">⚙️</div>
+              <h3 className="text-base font-semibold text-slate-900">Pipeline not yet initialized</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
+                Click the Start button to create the 5 pipeline steps (Script, Storyboard, Images, Voiceover, Render).
+              </p>
+              <button
+                type="button"
+                onClick={() => startMutation.mutate()}
+                disabled={isBusy}
+                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition cursor-pointer"
+              >
+                {startMutation.isPending ? "Initializing..." : "Start Pipeline"}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Stepper Navigation */}
+              <StepStepper
+                steps={sortedSteps}
+                shownStepName={shownStepName}
+                currentStepName={currentStepName}
+                onSelectStep={handleSelectStep}
+                onGoToCurrent={handleGoToCurrent}
+              />
+
+              {/* Single Detail Panel for Selected Step */}
+              {selectedStep && (
+                <StepDetailPanel
+                  step={selectedStep}
+                  allSteps={sortedSteps}
+                  isAnyRunning={isAnyRunning}
+                  onRerun={async (stepName, prompt) => {
+                    await rerunMutation.mutateAsync({ stepName, prompt });
+                  }}
+                />
               )}
             </div>
-
-            {!hasStarted ? (
-              <div className="text-center py-12 px-4 bg-white rounded-xl border border-dashed border-slate-300">
-                <div className="text-3xl mb-3">⚙️</div>
-                <h3 className="text-base font-semibold text-slate-900">Pipeline not yet initialized</h3>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
-                  Click the Start button to create the 5 pipeline steps (Script, Storyboard, Images, Voiceover, Render).
-                </p>
-                <button
-                  type="button"
-                  onClick={() => startMutation.mutate()}
-                  disabled={isBusy}
-                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition cursor-pointer"
-                >
-                  {startMutation.isPending ? "Initializing..." : "Start"}
-                </button>
-              </div>
-            ) : (
-              <StepTimeline
-                steps={steps}
-                isAnyRunning={isAnyRunning}
-                onRerun={async (stepName, prompt) => {
-                  await rerunMutation.mutateAsync({ stepName, prompt });
-                }}
-              />
-            )}
-          </div>
+          )}
         </>
       )}
     </div>
