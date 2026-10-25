@@ -4,6 +4,7 @@ import { use, useState, Suspense } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AuthGuard } from "@/components/AuthGuard";
+import { ChannelVisualStyleEditor } from "@/components/ChannelVisualStyleEditor";
 import { api, formatErrorMessage } from "@/lib/api";
 import type { VideoCreate, VideoStatus } from "@/lib/types";
 
@@ -160,6 +161,11 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
             + Create New Video
           </button>
         </div>
+      )}
+
+      {/* Channel Visual Style Card */}
+      {channel && (
+        <ChannelVisualStyleEditor channelId={channelId} savedSettings={channel.settings} />
       )}
 
       {/* Error state */}

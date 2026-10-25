@@ -95,6 +95,11 @@ export function RerunModal({
               placeholder="e.g. Make the hook more suspenseful, or focus more on the scientific explanation..."
               className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900"
             />
+            {stepName.toLowerCase() === "storyboard" && (
+              <p className="mt-1.5 text-xs text-slate-500">
+                Describe visual changes only (for example: make scene 3 a close-up). To change the words, rerun or edit the script step instead.
+              </p>
+            )}
           </div>
 
           <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">

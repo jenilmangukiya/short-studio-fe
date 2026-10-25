@@ -45,7 +45,7 @@ export interface ScriptMeta {
   reasoning_tokens?: number;
   latency_seconds?: number;
   attempts?: number;
-  revision?: string | number | null;
+  revision?: boolean | null;
 }
 
 export interface ScriptStepOutput {
@@ -53,6 +53,55 @@ export interface ScriptStepOutput {
   warnings?: string[];
   meta?: ScriptMeta;
   [key: string]: unknown;
+}
+
+export interface StoryboardScene {
+  index: number;
+  narration: string;
+  image_prompt: string;
+  shot_type: string;
+  est_seconds: number;
+}
+
+export type StoryboardStyleSource = "channel" | "default";
+
+export interface StoryboardData {
+  visual_style: string;
+  style_source: StoryboardStyleSource | string;
+  scenes: StoryboardScene[];
+  total_seconds: number;
+}
+
+export interface StoryboardMeta {
+  prompt_version?: string;
+  provider?: string;
+  model?: string;
+  task?: string;
+  input_tokens?: number;
+  output_tokens?: number;
+  reasoning_tokens?: number;
+  latency_seconds?: number;
+  attempts?: number;
+  revision?: boolean | null;
+}
+
+export interface StoryboardStepOutput {
+  storyboard?: StoryboardData;
+  warnings?: string[];
+  meta?: StoryboardMeta;
+  [key: string]: unknown;
+}
+
+/**
+ * Safely extracts the channel's custom visual_style string from its settings object.
+ * Returns null if settings is missing, not an object, or visual_style is empty/whitespace.
+ */
+export function getChannelVisualStyle(settings: unknown): string | null {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    return null;
+  }
+  const val = (settings as Record<string, unknown>).visual_style;
+  return typeof val === "string" && val.trim().length > 0 ? val.trim() : null;
 }
 
 export interface ApiValidationError {

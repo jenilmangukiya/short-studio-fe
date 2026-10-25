@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { StepOut, StepStatus } from "@/lib/types";
 import { ScriptOutputView } from "./ScriptOutputView";
+import { StoryboardOutputView } from "./StoryboardOutputView";
 import { CollapsibleJson } from "./CollapsibleJson";
 import { RerunModal } from "./RerunModal";
 
@@ -69,6 +70,7 @@ export function StepDetailPanel({
   };
 
   const isScript = step.name.toLowerCase() === "script";
+  const isStoryboard = step.name.toLowerCase() === "storyboard";
   const isMock = Boolean(
     step.output &&
       typeof step.output === "object" &&
@@ -204,6 +206,8 @@ export function StepDetailPanel({
                 <div className="opacity-50 pointer-events-none filter grayscale-30">
                   {isScript ? (
                     <ScriptOutputView output={step.output} />
+                  ) : isStoryboard ? (
+                    <StoryboardOutputView output={step.output} isMock={isMock} isStale={true} />
                   ) : (
                     <CollapsibleJson data={step.output} mock={isMock} defaultOpen={false} />
                   )}
@@ -222,6 +226,8 @@ export function StepDetailPanel({
           <div>
             {isScript ? (
               <ScriptOutputView output={step.output} />
+            ) : isStoryboard ? (
+              <StoryboardOutputView output={step.output} isMock={isMock} isStale={false} />
             ) : (
               <CollapsibleJson
                 data={step.output}
