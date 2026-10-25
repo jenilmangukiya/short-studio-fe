@@ -92,6 +92,56 @@ export interface StoryboardStepOutput {
   [key: string]: unknown;
 }
 
+export interface ImageItem {
+  index: number;
+  status: "ok" | "failed" | string;
+  file?: string | null;
+  prompt: string;
+  prompt_hash: string;
+  reused: boolean;
+  model: string;
+  size: string;
+  quality: string;
+  latency_seconds: number;
+  est_cost_usd?: number | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  total_tokens?: number | null;
+  error?: string | null;
+  [key: string]: unknown;
+}
+
+export interface ImagesData {
+  items: ImageItem[];
+  complete: boolean;
+  [key: string]: unknown;
+}
+
+export interface ImagesMeta {
+  provider?: string;
+  model?: string;
+  task?: string;
+  images_total?: number;
+  images_generated?: number;
+  images_reused?: number;
+  images_failed?: number;
+  est_cost_usd?: number | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  total_tokens?: number | null;
+  latency_seconds?: number;
+  mock?: boolean;
+  [key: string]: unknown;
+}
+
+export interface ImagesStepOutput {
+  images?: ImagesData;
+  warnings?: string[];
+  meta?: ImagesMeta;
+  mock?: boolean;
+  [key: string]: unknown;
+}
+
 /**
  * Safely extracts the channel's custom visual_style string from its settings object.
  * Returns null if settings is missing, not an object, or visual_style is empty/whitespace.

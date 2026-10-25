@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { StepOut, StepStatus } from "@/lib/types";
+import type { StepOut, StepStatus, StoryboardScene } from "@/lib/types";
 import { ScriptOutputView } from "./ScriptOutputView";
 import { StoryboardOutputView } from "./StoryboardOutputView";
+import { ImagesOutputView } from "./ImagesOutputView";
 import { CollapsibleJson } from "./CollapsibleJson";
 import { RerunModal } from "./RerunModal";
 
@@ -12,6 +13,7 @@ interface StepDetailPanelProps {
   allSteps: StepOut[];
   isAnyRunning: boolean;
   onRerun: (stepName: string, prompt?: string) => Promise<void>;
+  videoId: string;
 }
 
 function getBadgeStyle(status: StepStatus | string) {
@@ -35,6 +37,7 @@ export function StepDetailPanel({
   allSteps,
   isAnyRunning,
   onRerun,
+  videoId,
 }: StepDetailPanelProps) {
   const [isRerunOpen, setIsRerunOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -71,11 +74,20 @@ export function StepDetailPanel({
 
   const isScript = step.name.toLowerCase() === "script";
   const isStoryboard = step.name.toLowerCase() === "storyboard";
+  const isImages = step.name.toLowerCase() === "images";
   const isMock = Boolean(
     step.output &&
       typeof step.output === "object" &&
       (step.output as Record<string, unknown>).mock === true
   );
+
+  // Extract storyboard scenes if available to enrich images view with narration & shot types
+  const storyboardStep = allSteps.find((s) => s.name.toLowerCase() === "storyboard");
+  const rawStoryboardOutput = storyboardStep?.output as Record<string, unknown> | undefined;
+  const rawStoryboardData = (rawStoryboardOutput?.storyboard || rawStoryboardOutput) as Record<string, unknown> | undefined;
+  const storyboardScenes = Array.isArray(rawStoryboardData?.scenes)
+    ? (rawStoryboardData?.scenes as StoryboardScene[])
+    : undefined;
 
   return (
     <div
@@ -208,6 +220,15 @@ export function StepDetailPanel({
                     <ScriptOutputView output={step.output} />
                   ) : isStoryboard ? (
                     <StoryboardOutputView output={step.output} isMock={isMock} isStale={true} />
+                  ) : isImages ? (
+                    <ImagesOutputView
+                      videoId={videoId}
+                      output={step.output}
+                      isMock={isMock}
+                      isStale={true}
+                      isRunning={isRunning}
+                      storyboardScenes={storyboardScenes}
+                    />
                   ) : (
                     <CollapsibleJson data={step.output} mock={isMock} defaultOpen={false} />
                   )}
@@ -228,6 +249,15 @@ export function StepDetailPanel({
               <ScriptOutputView output={step.output} />
             ) : isStoryboard ? (
               <StoryboardOutputView output={step.output} isMock={isMock} isStale={false} />
+            ) : isImages ? (
+              <ImagesOutputView
+                videoId={videoId}
+                output={step.output}
+                isMock={isMock}
+                isStale={false}
+                isRunning={isRunning}
+                storyboardScenes={storyboardScenes}
+              />
             ) : (
               <CollapsibleJson
                 data={step.output}
@@ -241,11 +271,22 @@ export function StepDetailPanel({
 
         {/* Running without output yet */}
         {isRunning && !step.output && (
-          <div className="py-12 text-center rounded-xl border border-blue-100 bg-blue-50/30">
-            <div className="inline-block h-6 w-6 animate-spin rounded-full border-3 border-blue-200 border-t-blue-600 mb-2" />
-            <p className="text-sm font-semibold text-blue-900">Step is running...</p>
-            <p className="text-xs text-blue-600 mt-1">Generating output for this step in the background.</p>
-          </div>
+          isImages && storyboardScenes && storyboardScenes.length > 0 ? (
+            <ImagesOutputView
+              videoId={videoId}
+              output={{ images: { items: [], complete: false } }}
+              isMock={isMock}
+              isStale={false}
+              isRunning={true}
+              storyboardScenes={storyboardScenes}
+            />
+          ) : (
+            <div className="py-12 text-center rounded-xl border border-blue-100 bg-blue-50/30">
+              <div className="inline-block h-6 w-6 animate-spin rounded-full border-3 border-blue-200 border-t-blue-600 mb-2" />
+              <p className="text-sm font-semibold text-blue-900">Step is running...</p>
+              <p className="text-xs text-blue-600 mt-1">Generating output for this step in the background.</p>
+            </div>
+          )
         )}
       </div>
 

@@ -430,6 +430,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                   step={selectedStep}
                   allSteps={sortedSteps}
                   isAnyRunning={isAnyRunning}
+                  videoId={videoId}
                   onRerun={async (stepName, prompt) => {
                     await rerunMutation.mutateAsync({ stepName, prompt });
                   }}
