@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useObjectUrl } from "@/lib/object-url";
+import { SubtitleOverlay } from "./SubtitleOverlay";
 
 interface VideoPlayerProps {
   videoId: string;
@@ -26,7 +27,8 @@ export function VideoPlayer({
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [downloading, setDownloading] = useState(false);
+  const [downloadingType, setDownloadingType] = useState<"captioned" | "original" | null>(null);
+  const [showSubtitles, setShowSubtitles] = useState(true);
 
   const shouldFetch = Boolean(videoId && isReady && !isRendering);
 
@@ -38,12 +40,25 @@ export function VideoPlayer({
     refetch,
   } = useQuery({
     queryKey: ["video-blob", videoId],
-    queryFn: () => api.videos.getVideoBlob(videoId),
+    queryFn: () => api.videos.getVideoBlob(videoId, false),
     enabled: shouldFetch,
     staleTime: 1000 * 60 * 15, // 15 mins cache
     gcTime: 1000 * 60 * 30,
     retry: 1,
   });
+
+  const { data: subtitlesData } = useQuery({
+    queryKey: ["video-subtitles", videoId],
+    queryFn: () => api.videos.getSubtitles(videoId),
+    enabled: shouldFetch,
+    staleTime: 1000 * 60 * 15,
+    gcTime: 1000 * 60 * 30,
+    retry: false, // Don't retry if subtitles step is pending or 404
+  });
+
+  const hasSubtitles = Boolean(
+    subtitlesData?.segments && subtitlesData.segments.length > 0
+  );
 
   const videoUrl = useObjectUrl(blob);
 
@@ -68,34 +83,24 @@ export function VideoPlayer({
     }
   };
 
-  const handleDownload = async () => {
-    if (!blob) {
-      setDownloading(true);
-      try {
-        const result = await api.videos.downloadBlob(videoId);
-        const url = URL.createObjectURL(result.blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = result.filename;
-        document.body.appendChild(a);
-        a.click();
-        URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } finally {
-        setDownloading(false);
-      }
-      return;
+  const handleDownload = async (captioned: boolean = true) => {
+    setDownloadingType(captioned ? "captioned" : "original");
+    try {
+      const result = await api.videos.downloadBlob(videoId, captioned);
+      const url = URL.createObjectURL(result.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const filename =
+        result.filename ||
+        `${(topic || "video").toLowerCase().replace(/[^a-z0-9]+/g, "-")}${captioned ? "-captioned" : ""}.mp4`;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } finally {
+      setDownloadingType(null);
     }
-
-    // Download already loaded blob instantly
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${(topic || "video").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    URL.revokeObjectURL(url);
-    document.body.removeChild(a);
   };
 
   const isNotAvailableYet =
@@ -144,7 +149,7 @@ export function VideoPlayer({
           </div>
         )}
 
-        {/* 4. Error State (Gracefully handling "not available yet" vs unexpected failures) */}
+        {/* 4. Error State */}
         {shouldFetch && isError && (
           isNotAvailableYet ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950 text-slate-400">
@@ -186,33 +191,81 @@ export function VideoPlayer({
               className="w-full h-full object-cover"
             />
 
+            {/* Synchronized Animated Subtitles Overlay */}
+            <SubtitleOverlay
+              videoRef={videoRef}
+              subtitles={subtitlesData}
+              visible={showSubtitles}
+            />
+
             {/* Quick Play/Pause Big Center Overlay (only when paused) */}
             {!isPlaying && (
               <button
                 type="button"
                 onClick={handlePlayToggle}
                 aria-label="Play video"
-                className="absolute inset-0 m-auto flex h-16 w-16 items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition shadow-lg cursor-pointer hover:scale-105 active:scale-95"
+                className="absolute inset-0 m-auto flex h-16 w-16 items-center justify-center rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition shadow-lg cursor-pointer hover:scale-105 active:scale-95 z-20"
               >
                 <span className="text-2xl ml-1">▶</span>
+              </button>
+            )}
+
+            {/* Subtitles CC Toggle Badge */}
+            {hasSubtitles && (
+              <button
+                type="button"
+                onClick={() => setShowSubtitles((prev) => !prev)}
+                title={showSubtitles ? "Disable interactive subtitles" : "Enable interactive subtitles"}
+                aria-label={showSubtitles ? "Disable interactive subtitles" : "Enable interactive subtitles"}
+                className={`absolute top-3 right-3 z-20 px-2.5 py-1 rounded-lg text-[11px] font-bold tracking-wide transition-all shadow-md cursor-pointer flex items-center gap-1.5 ${
+                  showSubtitles
+                    ? "bg-black/70 text-amber-300 border border-amber-300/40 backdrop-blur-xs hover:bg-black/85"
+                    : "bg-black/50 text-white/50 border border-white/10 hover:text-white/80 backdrop-blur-xs line-through"
+                }`}
+              >
+                <span className="text-[10px] bg-amber-400/20 px-1 py-0.5 rounded font-mono font-bold">
+                  CC
+                </span>
+                <span>{showSubtitles ? "ON" : "OFF"}</span>
               </button>
             )}
           </>
         )}
       </div>
 
-      {/* Download Action Button below player (only shown when ready and not rendering) */}
+      {/* Download Action Buttons below player (only shown when ready and not rendering) */}
       {showDownloadButton && isReady && !isRendering && (
-        <div className="mt-3.5 flex items-center justify-center gap-2">
+        <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
+          {/* Primary Action: Download Captioned MP4 with burned-in subtitles */}
           <button
             type="button"
-            onClick={handleDownload}
-            disabled={downloading || isLoading || isError}
+            onClick={() => handleDownload(true)}
+            disabled={downloadingType !== null || isLoading || isError}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-xs transition disabled:opacity-50 cursor-pointer"
+            title="Download full video with permanent animated word-highlighted subtitles"
           >
             <span>📥</span>
-            <span>{downloading ? "Preparing download..." : "Download Final Video (MP4)"}</span>
+            <span>
+              {downloadingType === "captioned"
+                ? "Preparing captioned video..."
+                : hasSubtitles
+                ? "Download Captioned Video (MP4)"
+                : "Download Video (MP4)"}
+            </span>
           </button>
+
+          {/* Secondary Action: Download Clean Original (no subtitles) */}
+          {hasSubtitles && (
+            <button
+              type="button"
+              onClick={() => handleDownload(false)}
+              disabled={downloadingType !== null || isLoading || isError}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium text-xs border border-slate-700 transition disabled:opacity-50 cursor-pointer"
+              title="Download clean original video without burned-in subtitles"
+            >
+              <span>{downloadingType === "original" ? "Preparing clean..." : "Clean (No Subs)"}</span>
+            </button>
+          )}
         </div>
       )}
     </div>

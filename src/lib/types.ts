@@ -22,9 +22,65 @@ export const PIPELINE_STEP_NAMES = [
   "images",
   "voiceover",
   "render",
+  "subtitles",
 ] as const;
 
 export type PipelineStepName = (typeof PIPELINE_STEP_NAMES)[number];
+
+export interface WordTimestamp {
+  text: string;
+  start: number;
+  end: number;
+  confidence?: number;
+}
+
+export interface SubtitleSegment {
+  index: number;
+  text: string;
+  start: number;
+  end: number;
+  words: WordTimestamp[];
+}
+
+export interface SubtitleData {
+  segments: SubtitleSegment[];
+  format?: string;
+  total_words?: number;
+  total_duration_seconds?: number;
+  file?: string;
+  vtt_file?: string;
+  srt_file?: string;
+  ass_file?: string;
+  captioned_file?: string;
+  captioned_video_path?: string;
+}
+
+export interface SubtitleMeta {
+  task?: string;
+  provider?: string;
+  model?: string;
+  scenes_count?: number;
+  words_count?: number;
+  duration_seconds?: number;
+  captioned_burned?: boolean;
+  latency_seconds?: number;
+  mock?: boolean;
+  [key: string]: unknown;
+}
+
+export interface SubtitlesStepOutput {
+  subtitles?: SubtitleData;
+  subtitles_path?: string;
+  vtt_path?: string;
+  srt_path?: string;
+  ass_path?: string;
+  captioned_video_path?: string;
+  warnings?: string[];
+  meta?: SubtitleMeta;
+  mock?: boolean;
+  [key: string]: unknown;
+}
+
 
 export interface ScriptContent {
   title?: string;

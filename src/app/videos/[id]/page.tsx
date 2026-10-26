@@ -444,7 +444,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
               <div className="text-3xl mb-3">⚙️</div>
               <h3 className="text-base font-semibold text-slate-900">Pipeline not yet initialized</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
-                Click the Start button to create the 5 pipeline steps (Script, Storyboard, Images, Voiceover, Render).
+                Click the Start button to create the 6 pipeline steps (Script, Storyboard, Images, Voiceover, Render, Subtitles).
               </p>
               <button
                 type="button"

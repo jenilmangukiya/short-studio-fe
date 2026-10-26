@@ -9,6 +9,7 @@ import type {
   VideoSummary,
   VideoDetail,
   VideoCreate,
+  SubtitleData,
   ApiValidationError,
   ApiErrorResponse,
 } from "./types";
@@ -238,14 +239,14 @@ export const api = {
       });
     },
 
-    async downloadBlob(id: string): Promise<{ blob: Blob; filename: string }> {
+    async downloadBlob(id: string, captioned: boolean = true): Promise<{ blob: Blob; filename: string }> {
       const token = getToken();
       const headers = new Headers();
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
 
-      const response = await fetch(`/api/videos/${id}/download`, {
+      const response = await fetch(`/api/videos/${id}/download?captioned=${captioned}`, {
         method: "GET",
         headers,
       });
@@ -345,10 +346,15 @@ export const api = {
       return response.blob();
     },
 
-    async getVideoBlob(videoId: string): Promise<Blob> {
-      const { blob } = await this.downloadBlob(videoId);
+    async getVideoBlob(videoId: string, captioned: boolean = false): Promise<Blob> {
+      const { blob } = await this.downloadBlob(videoId, captioned);
       return blob;
+    },
+
+    async getSubtitles(videoId: string): Promise<SubtitleData> {
+      return request<SubtitleData>(`/api/videos/${videoId}/subtitles`);
     },
   },
 };
+
 

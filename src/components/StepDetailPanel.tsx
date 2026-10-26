@@ -7,6 +7,7 @@ import { StoryboardOutputView } from "./StoryboardOutputView";
 import { ImagesOutputView } from "./ImagesOutputView";
 import { VoiceoverOutputView } from "./VoiceoverOutputView";
 import { RenderOutputView } from "./RenderOutputView";
+import { SubtitlesOutputView } from "./SubtitlesOutputView";
 import { CollapsibleJson } from "./CollapsibleJson";
 import { RerunModal } from "./RerunModal";
 
@@ -81,6 +82,8 @@ export function StepDetailPanel({
   const isImages = step.name.toLowerCase() === "images";
   const isVoiceover = step.name.toLowerCase() === "voiceover";
   const isRender = step.name.toLowerCase() === "render";
+  const isSubtitles =
+    step.name.toLowerCase() === "subtitles" || step.name.toLowerCase() === "subtitle";
   const isMock = Boolean(
     step.output &&
       typeof step.output === "object" &&
@@ -302,6 +305,16 @@ export function StepDetailPanel({
                 isRunning={isRunning}
                 stepStatus={step.status}
               />
+            ) : isSubtitles ? (
+              <SubtitlesOutputView
+                videoId={videoId}
+                topic={topic}
+                output={step.output}
+                isMock={isMock}
+                isStale={false}
+                isRunning={isRunning}
+                stepStatus={step.status}
+              />
             ) : (
               <CollapsibleJson
                 data={step.output}
@@ -338,6 +351,16 @@ export function StepDetailPanel({
               videoId={videoId}
               topic={topic}
               output={{ render: {} }}
+              isMock={isMock}
+              isStale={false}
+              isRunning={true}
+              stepStatus={step.status}
+            />
+          ) : isSubtitles ? (
+            <SubtitlesOutputView
+              videoId={videoId}
+              topic={topic}
+              output={{ subtitles: { segments: [] } }}
               isMock={isMock}
               isStale={false}
               isRunning={true}
