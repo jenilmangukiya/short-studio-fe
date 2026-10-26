@@ -142,6 +142,81 @@ export interface ImagesStepOutput {
   [key: string]: unknown;
 }
 
+export interface VoiceoverItem {
+  index: number;
+  narration: string;
+  file?: string | null;
+  duration_seconds: number;
+  latency_seconds?: number;
+  status: "ok" | "failed" | string;
+  reused: boolean;
+  audio_hash?: string;
+  [key: string]: unknown;
+}
+
+export interface VoiceoverData {
+  items: VoiceoverItem[];
+  complete: boolean;
+  total_duration_seconds: number;
+  [key: string]: unknown;
+}
+
+export interface VoiceoverMeta {
+  provider?: string;
+  model?: string;
+  task?: string;
+  scenes_total?: number;
+  scenes_generated?: number;
+  scenes_reused?: number;
+  scenes_failed?: number;
+  voice?: string;
+  speed?: number;
+  latency_seconds?: number;
+  mock?: boolean;
+  [key: string]: unknown;
+}
+
+export interface VoiceoverStepOutput {
+  voiceover?: VoiceoverData;
+  duration_seconds?: number;
+  warnings?: string[];
+  meta?: VoiceoverMeta;
+  mock?: boolean;
+  [key: string]: unknown;
+}
+
+export interface RenderData {
+  video_path?: string;
+  duration_seconds?: number;
+  resolution?: string;
+  fps?: number;
+  codec?: string;
+  audio_codec?: string;
+  file_size_bytes?: number;
+  scenes_rendered?: number;
+  [key: string]: unknown;
+}
+
+export interface RenderMeta {
+  task?: string;
+  scenes_count?: number;
+  resolution?: string;
+  fps?: number;
+  latency_seconds?: number;
+  file_size_bytes?: number;
+  [key: string]: unknown;
+}
+
+export interface RenderStepOutput {
+  render?: RenderData;
+  video_path?: string;
+  duration_seconds?: number;
+  meta?: RenderMeta;
+  warnings?: string[];
+  [key: string]: unknown;
+}
+
+
 /**
  * Safely extracts the channel's custom visual_style string from its settings object.
  * Returns null if settings is missing, not an object, or visual_style is empty/whitespace.

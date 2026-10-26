@@ -309,5 +309,46 @@ export const api = {
 
       return response.blob();
     },
+
+    async getSceneAudioBlob(videoId: string, sceneIndex: number): Promise<Blob> {
+      const token = getToken();
+      const headers = new Headers();
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+
+      const response = await fetch(`/api/videos/${videoId}/audio/${sceneIndex}`, {
+        method: "GET",
+        headers,
+      });
+
+      if (response.status === 401) {
+        removeToken();
+        if (typeof window !== "undefined") {
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.href = "/login";
+        }
+        throw new ApiError(401, "Session expired. Please log in again.", "Unauthorized");
+      }
+
+      if (!response.ok) {
+        let msg = `Failed to load scene ${sceneIndex} audio (${response.status})`;
+        try {
+          const err = await response.json();
+          if (err.detail) msg = err.detail;
+        } catch {
+          // ignore non-json
+        }
+        throw new ApiError(response.status, msg, msg);
+      }
+
+      return response.blob();
+    },
+
+    async getVideoBlob(videoId: string): Promise<Blob> {
+      const { blob } = await this.downloadBlob(videoId);
+      return blob;
+    },
   },
 };
+

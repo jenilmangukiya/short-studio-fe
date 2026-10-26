@@ -5,6 +5,8 @@ import type { StepOut, StepStatus, StoryboardScene } from "@/lib/types";
 import { ScriptOutputView } from "./ScriptOutputView";
 import { StoryboardOutputView } from "./StoryboardOutputView";
 import { ImagesOutputView } from "./ImagesOutputView";
+import { VoiceoverOutputView } from "./VoiceoverOutputView";
+import { RenderOutputView } from "./RenderOutputView";
 import { CollapsibleJson } from "./CollapsibleJson";
 import { RerunModal } from "./RerunModal";
 
@@ -14,6 +16,7 @@ interface StepDetailPanelProps {
   isAnyRunning: boolean;
   onRerun: (stepName: string, prompt?: string) => Promise<void>;
   videoId: string;
+  topic?: string;
 }
 
 function getBadgeStyle(status: StepStatus | string) {
@@ -38,6 +41,7 @@ export function StepDetailPanel({
   isAnyRunning,
   onRerun,
   videoId,
+  topic,
 }: StepDetailPanelProps) {
   const [isRerunOpen, setIsRerunOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -75,6 +79,8 @@ export function StepDetailPanel({
   const isScript = step.name.toLowerCase() === "script";
   const isStoryboard = step.name.toLowerCase() === "storyboard";
   const isImages = step.name.toLowerCase() === "images";
+  const isVoiceover = step.name.toLowerCase() === "voiceover";
+  const isRender = step.name.toLowerCase() === "render";
   const isMock = Boolean(
     step.output &&
       typeof step.output === "object" &&
@@ -229,6 +235,25 @@ export function StepDetailPanel({
                       isRunning={isRunning}
                       storyboardScenes={storyboardScenes}
                     />
+                  ) : isVoiceover ? (
+                    <VoiceoverOutputView
+                      videoId={videoId}
+                      output={step.output}
+                      isMock={isMock}
+                      isStale={true}
+                      isRunning={isRunning}
+                      storyboardScenes={storyboardScenes}
+                    />
+                  ) : isRender ? (
+                    <RenderOutputView
+                      videoId={videoId}
+                      topic={topic}
+                      output={step.output}
+                      isMock={isMock}
+                      isStale={true}
+                      isRunning={isRunning}
+                      stepStatus={step.status}
+                    />
                   ) : (
                     <CollapsibleJson data={step.output} mock={isMock} defaultOpen={false} />
                   )}
@@ -258,6 +283,25 @@ export function StepDetailPanel({
                 isRunning={isRunning}
                 storyboardScenes={storyboardScenes}
               />
+            ) : isVoiceover ? (
+              <VoiceoverOutputView
+                videoId={videoId}
+                output={step.output}
+                isMock={isMock}
+                isStale={false}
+                isRunning={isRunning}
+                storyboardScenes={storyboardScenes}
+              />
+            ) : isRender ? (
+              <RenderOutputView
+                videoId={videoId}
+                topic={topic}
+                output={step.output}
+                isMock={isMock}
+                isStale={false}
+                isRunning={isRunning}
+                stepStatus={step.status}
+              />
             ) : (
               <CollapsibleJson
                 data={step.output}
@@ -279,6 +323,25 @@ export function StepDetailPanel({
               isStale={false}
               isRunning={true}
               storyboardScenes={storyboardScenes}
+            />
+          ) : isVoiceover && storyboardScenes && storyboardScenes.length > 0 ? (
+            <VoiceoverOutputView
+              videoId={videoId}
+              output={{ voiceover: { items: [], complete: false } }}
+              isMock={isMock}
+              isStale={false}
+              isRunning={true}
+              storyboardScenes={storyboardScenes}
+            />
+          ) : isRender ? (
+            <RenderOutputView
+              videoId={videoId}
+              topic={topic}
+              output={{ render: {} }}
+              isMock={isMock}
+              isStale={false}
+              isRunning={true}
+              stepStatus={step.status}
             />
           ) : (
             <div className="py-12 text-center rounded-xl border border-blue-100 bg-blue-50/30">

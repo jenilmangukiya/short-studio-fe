@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AuthGuard } from "@/components/AuthGuard";
 import { StepStepper } from "@/components/StepStepper";
 import { StepDetailPanel } from "@/components/StepDetailPanel";
+import { VideoPlayer } from "@/components/VideoPlayer";
 import { api, formatErrorMessage } from "@/lib/api";
 import { PIPELINE_STEP_NAMES, type PipelineStepName, type VideoStatus } from "@/lib/types";
 
@@ -58,6 +59,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
   const searchParams = useSearchParams();
   const [actionError, setActionError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(true);
 
   // URL step param initialization:
   // On load: valid ?step= means follow mode is OFF; missing or invalid means follow mode is ON.
@@ -291,9 +293,17 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                 )}
               </div>
 
-              {/* Download Action (Available when completed) */}
+              {/* Completed Video Actions */}
               {video.status === "completed" && (
-                <div className="shrink-0 pt-2 md:pt-0">
+                <div className="shrink-0 pt-2 md:pt-0 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPreviewExpanded((prev) => !prev)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs shadow-2xs transition cursor-pointer"
+                  >
+                    <span>{isPreviewExpanded ? "▲ Hide Video Preview" : "▼ Watch Video Preview"}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={handleDownload}
@@ -302,7 +312,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                   >
                     <span>📥</span>
                     <span>
-                      {downloading ? "Downloading..." : "Download output (placeholder file)"}
+                      {downloading ? "Preparing MP4..." : "Download Video (MP4)"}
                     </span>
                   </button>
                 </div>
@@ -373,6 +383,38 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
             </div>
           </div>
 
+          {/* Collapsible Video Preview Hero when Completed */}
+          {video.status === "completed" && isPreviewExpanded && (
+            <div className="rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/60 to-white p-6 shadow-xs flex flex-col items-center">
+              <div className="w-full max-w-xl flex items-center justify-between pb-3 mb-5 border-b border-indigo-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🎉</span>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">
+                      Full Short Video Ready
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Stitched 1080x1920 vertical video with Kokoro audio & AI visuals.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewExpanded(false)}
+                  className="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-1 rounded hover:bg-indigo-100/50 transition cursor-pointer"
+                >
+                  Hide preview &times;
+                </button>
+              </div>
+
+              <VideoPlayer
+                videoId={videoId}
+                topic={video.topic}
+                showDownloadButton={true}
+              />
+            </div>
+          )}
+
           {/* Failed-Step Error Summary Banner (Above Stepper) */}
           {failedStep && (
             <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-xs text-red-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs">
@@ -431,6 +473,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                   allSteps={sortedSteps}
                   isAnyRunning={isAnyRunning}
                   videoId={videoId}
+                  topic={video.topic}
                   onRerun={async (stepName, prompt) => {
                     await rerunMutation.mutateAsync({ stepName, prompt });
                   }}
