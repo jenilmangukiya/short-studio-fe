@@ -9,6 +9,7 @@ import type {
   VideoSummary,
   VideoDetail,
   VideoCreate,
+  StepRevision,
   SubtitleData,
   ApiValidationError,
   ApiErrorResponse,
@@ -227,6 +228,37 @@ export const api = {
 
     async runAll(id: string): Promise<VideoDetail> {
       return request<VideoDetail>(`/api/videos/${id}/run-all`, {
+        method: "POST",
+      });
+    },
+
+    async approveStep(id: string, stepName: string, autoAdvance: boolean = false): Promise<VideoDetail> {
+      return request<VideoDetail>(`/api/videos/${id}/steps/${stepName}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_advance: autoAdvance }),
+      });
+    },
+
+    async updateStepContent(
+      id: string,
+      stepName: string,
+      output: Record<string, unknown>,
+      changeSummary?: string
+    ): Promise<VideoDetail> {
+      return request<VideoDetail>(`/api/videos/${id}/steps/${stepName}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ output, change_summary: changeSummary || null }),
+      });
+    },
+
+    async getStepHistory(id: string, stepName: string): Promise<StepRevision[]> {
+      return request<StepRevision[]>(`/api/videos/${id}/steps/${stepName}/history`);
+    },
+
+    async rollbackStep(id: string, stepName: string, version: number): Promise<VideoDetail> {
+      return request<VideoDetail>(`/api/videos/${id}/steps/${stepName}/rollback/${version}`, {
         method: "POST",
       });
     },

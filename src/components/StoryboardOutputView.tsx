@@ -8,6 +8,8 @@ interface StoryboardOutputViewProps {
   output: unknown;
   isMock?: boolean;
   isStale?: boolean;
+  onSave?: (updatedScenes: ValidatedScene[]) => Promise<void>;
+  isSaving?: boolean;
 }
 
 interface ValidatedScene {
@@ -128,10 +130,28 @@ export function StoryboardOutputView({
   output,
   isMock = false,
   isStale = false,
+  onSave,
+  isSaving = false,
 }: StoryboardOutputViewProps) {
   const [copyStatus, setCopyStatus] = useState<Record<string, "copied" | "failed">>({});
   const [showRaw, setShowRaw] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const [editingSceneIndex, setEditingSceneIndex] = useState<number | null>(null);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editNarration, setEditNarration] = useState("");
+  const [editShotType, setEditShotType] = useState("");
+
+  const startEditing = (scene: ValidatedScene) => {
+    setEditingSceneIndex(scene.index);
+    setEditPrompt(scene.image_prompt);
+    setEditNarration(scene.narration);
+    setEditShotType(scene.shot_type);
+  };
+
+  const cancelEditing = () => {
+    setEditingSceneIndex(null);
+  };
 
   const parsed = parseAndValidateStoryboard(output);
 
@@ -150,6 +170,23 @@ export function StoryboardOutputView({
   const { visual_style, style_source, scenes, total_seconds, warnings, meta } = parsed;
 
   const isOutsideRecommended = total_seconds < 45 || total_seconds > 60;
+
+  const handleSaveScene = async (sceneIndex: number) => {
+    if (!onSave) return;
+    const updatedScenes = scenes.map((s) => {
+      if (s.index === sceneIndex) {
+        return {
+          ...s,
+          image_prompt: editPrompt.trim(),
+          narration: editNarration.trim(),
+          shot_type: editShotType.trim() || s.shot_type,
+        };
+      }
+      return s;
+    });
+    await onSave(updatedScenes);
+    setEditingSceneIndex(null);
+  };
 
   const handleCopy = async (key: string, textToCopy: string) => {
     if (isStale) return;
@@ -304,8 +341,39 @@ export function StoryboardOutputView({
                 </span>
               </div>
 
-              {/* Copy Action Buttons (Disabled when step is stale) */}
+              {/* Action Buttons */}
               <div className="flex items-center gap-2">
+                {onSave && !isStale && (
+                  editingSceneIndex === scene.index ? (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={isSaving}
+                        onClick={cancelEditing}
+                        className="px-2.5 py-1 text-xs font-medium rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer shadow-2xs"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isSaving}
+                        onClick={() => handleSaveScene(scene.index)}
+                        className="px-2.5 py-1 text-xs font-semibold rounded-md bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-2xs disabled:opacity-50"
+                      >
+                        {isSaving ? "Saving..." : "Save Scene"}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => startEditing(scene)}
+                      className="px-2.5 py-1 text-xs font-medium rounded-md border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 cursor-pointer shadow-2xs"
+                    >
+                      ✎ Edit Scene
+                    </button>
+                  )
+                )}
+
                 <button
                   type="button"
                   disabled={isStale}
@@ -343,25 +411,68 @@ export function StoryboardOutputView({
               </div>
             </div>
 
-            {/* Narration */}
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                Narration
-              </span>
-              <p className="text-xs text-slate-800 leading-relaxed font-serif whitespace-pre-wrap">
-                {scene.narration}
-              </p>
-            </div>
+            {editingSceneIndex === scene.index ? (
+              /* Inline Edit Mode for Scene */
+              <div className="space-y-3 pt-1">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Shot Type
+                  </label>
+                  <input
+                    type="text"
+                    value={editShotType}
+                    onChange={(e) => setEditShotType(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
 
-            {/* Image Prompt in distinct container */}
-            <div className="rounded-lg bg-slate-900 text-slate-100 p-3 text-xs font-mono border border-slate-800">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 block mb-1">
-                Image Prompt
-              </span>
-              <p className="leading-relaxed text-slate-200 whitespace-pre-wrap select-all">
-                {scene.image_prompt}
-              </p>
-            </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Narration Text
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editNarration}
+                    onChange={(e) => setEditNarration(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-serif leading-relaxed rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-indigo-600 mb-1">
+                    Image Prompt (AI Direction)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editPrompt}
+                    onChange={(e) => setEditPrompt(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-mono leading-relaxed rounded-lg border border-slate-300 bg-slate-900 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Narration */}
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Narration
+                  </span>
+                  <p className="text-xs text-slate-800 leading-relaxed font-serif whitespace-pre-wrap">
+                    {scene.narration}
+                  </p>
+                </div>
+
+                {/* Image Prompt in distinct container */}
+                <div className="rounded-lg bg-slate-900 text-slate-100 p-3 text-xs font-mono border border-slate-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 block mb-1">
+                    Image Prompt
+                  </span>
+                  <p className="leading-relaxed text-slate-200 whitespace-pre-wrap select-all">
+                    {scene.image_prompt}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>

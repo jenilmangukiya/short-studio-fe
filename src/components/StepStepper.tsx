@@ -20,6 +20,13 @@ function getStatusDetails(status: StepStatus | string) {
         icon: "✓",
         dotColor: "bg-emerald-500",
       };
+    case "awaiting_approval":
+      return {
+        label: "review",
+        badgeBg: "bg-purple-50 text-purple-700 border-purple-300",
+        icon: "✋",
+        dotColor: "bg-purple-600 animate-pulse",
+      };
     case "running":
       return {
         label: "running",

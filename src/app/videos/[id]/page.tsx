@@ -149,6 +149,43 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
     onError: (err) => setActionError(formatErrorMessage(err)),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: ({ stepName, autoAdvance }: { stepName: string; autoAdvance?: boolean }) =>
+      api.videos.approveStep(videoId, stepName, autoAdvance),
+    onSuccess: () => {
+      setActionError(null);
+      queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+    },
+    onError: (err) => setActionError(formatErrorMessage(err)),
+  });
+
+  const updateContentMutation = useMutation({
+    mutationFn: ({
+      stepName,
+      output,
+      summary,
+    }: {
+      stepName: string;
+      output: Record<string, unknown>;
+      summary?: string;
+    }) => api.videos.updateStepContent(videoId, stepName, output, summary),
+    onSuccess: () => {
+      setActionError(null);
+      queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+    },
+    onError: (err) => setActionError(formatErrorMessage(err)),
+  });
+
+  const rollbackMutation = useMutation({
+    mutationFn: ({ stepName, version }: { stepName: string; version: number }) =>
+      api.videos.rollbackStep(videoId, stepName, version),
+    onSuccess: () => {
+      setActionError(null);
+      queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+    },
+    onError: (err) => setActionError(formatErrorMessage(err)),
+  });
+
   // Step calculations
   const steps = video?.steps || [];
   const sortedSteps = [...steps].sort((a, b) => a.position - b.position);
@@ -169,9 +206,14 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
   // Check if any step in pipeline has failed
   const failedStep = sortedSteps.find((s) => s.status === "failed");
 
-  // Determine label for main pipeline button (Next step vs Retry step)
+  // Determine label for main pipeline button (Next step, Retry step, or Approve & Next)
   const isNextStepFailed = currentStep?.status === "failed";
-  const nextButtonLabel = isNextStepFailed ? "Retry step" : "Next step";
+  const isNextStepAwaitingApproval = currentStep?.status === "awaiting_approval";
+  const nextButtonLabel = isNextStepFailed
+    ? "Retry step"
+    : isNextStepAwaitingApproval
+    ? "Approve & Next →"
+    : "Next step";
 
   // Selection handlers
   const handleSelectStep = (stepName: string) => {
@@ -358,7 +400,13 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                   <>
                     <button
                       type="button"
-                      onClick={() => nextMutation.mutate()}
+                      onClick={() => {
+                        if (isNextStepAwaitingApproval && currentStep) {
+                          approveMutation.mutate({ stepName: currentStep.name, autoAdvance: true });
+                        } else {
+                          nextMutation.mutate();
+                        }
+                      }}
                       disabled={isAnyRunning || allDone || isBusy}
                       className={`px-4 py-2 rounded-lg font-semibold text-xs transition shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
                         isNextStepFailed
@@ -476,6 +524,15 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                   topic={video.topic}
                   onRerun={async (stepName, prompt) => {
                     await rerunMutation.mutateAsync({ stepName, prompt });
+                  }}
+                  onApprove={async (stepName, autoAdvance) => {
+                    await approveMutation.mutateAsync({ stepName, autoAdvance });
+                  }}
+                  onUpdateContent={async (stepName, output, summary) => {
+                    await updateContentMutation.mutateAsync({ stepName, output, summary });
+                  }}
+                  onRollback={async (stepName, version) => {
+                    await rollbackMutation.mutateAsync({ stepName, version });
                   }}
                 />
               )}

@@ -12,9 +12,21 @@ export type VideoSummary = components["schemas"]["VideoSummary"];
 export type VideoDetail = components["schemas"]["VideoDetail"];
 export type VideoCreate = components["schemas"]["VideoCreate"];
 
-export type StepOut = components["schemas"]["StepOut"];
-export type StepStatus = "pending" | "running" | "done" | "failed" | "stale";
+export type StepOut = components["schemas"]["StepOut"] & {
+  revisions_count?: number;
+};
+export type StepStatus = "pending" | "running" | "awaiting_approval" | "done" | "failed" | "stale";
 export type VideoStatus = "draft" | "in_progress" | "completed" | "failed";
+
+export interface StepRevision {
+  id: string;
+  step_id: string;
+  version: number;
+  output: Record<string, unknown> | null;
+  user_prompt: string | null;
+  change_summary: string | null;
+  created_at: string;
+}
 
 export const PIPELINE_STEP_NAMES = [
   "script",

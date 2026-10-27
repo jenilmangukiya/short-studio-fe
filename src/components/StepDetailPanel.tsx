@@ -10,12 +10,16 @@ import { RenderOutputView } from "./RenderOutputView";
 import { SubtitlesOutputView } from "./SubtitlesOutputView";
 import { CollapsibleJson } from "./CollapsibleJson";
 import { RerunModal } from "./RerunModal";
+import { StepHistoryModal } from "./StepHistoryModal";
 
 interface StepDetailPanelProps {
   step: StepOut;
   allSteps: StepOut[];
   isAnyRunning: boolean;
   onRerun: (stepName: string, prompt?: string) => Promise<void>;
+  onApprove?: (stepName: string, autoAdvance?: boolean) => Promise<void>;
+  onUpdateContent?: (stepName: string, output: Record<string, unknown>, summary?: string) => Promise<void>;
+  onRollback?: (stepName: string, version: number) => Promise<void>;
   videoId: string;
   topic?: string;
 }
@@ -24,6 +28,8 @@ function getBadgeStyle(status: StepStatus | string) {
   switch (status) {
     case "done":
       return "bg-emerald-50 text-emerald-700 border-emerald-300";
+    case "awaiting_approval":
+      return "bg-purple-50 text-purple-700 border-purple-300 font-bold";
     case "running":
       return "bg-blue-50 text-blue-700 border-blue-300 animate-pulse";
     case "failed":
@@ -41,10 +47,16 @@ export function StepDetailPanel({
   allSteps,
   isAnyRunning,
   onRerun,
+  onApprove,
+  onUpdateContent,
+  onRollback,
   videoId,
   topic,
 }: StepDetailPanelProps) {
   const [isRerunOpen, setIsRerunOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   const isRunning = step.status === "running";
@@ -52,6 +64,7 @@ export function StepDetailPanel({
   const isFailed = step.status === "failed";
   const isDone = step.status === "done";
   const isPending = step.status === "pending";
+  const isAwaitingApproval = step.status === "awaiting_approval";
 
   // Tick current time while step is running to compute live duration
   useEffect(() => {
@@ -149,8 +162,16 @@ export function StepDetailPanel({
           </div>
         </div>
 
-        {/* Action: Rerun button */}
+        {/* Action buttons: History & Rerun */}
         <div className="flex items-center gap-2 self-start sm:self-center">
+          <button
+            type="button"
+            onClick={() => setIsHistoryOpen(true)}
+            className="px-3 py-2 text-xs font-semibold rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 shadow-2xs transition cursor-pointer flex items-center gap-1.5"
+          >
+            <span>📜</span>
+            <span>History {step.revisions_count ? `(${step.revisions_count})` : ""}</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsRerunOpen(true)}
@@ -164,6 +185,52 @@ export function StepDetailPanel({
 
       {/* Panel Body */}
       <div className="p-5 sm:p-6 space-y-5">
+        {/* Awaiting Approval Gatekeeping Banner */}
+        {isAwaitingApproval && (
+          <div className="rounded-xl bg-purple-50 border border-purple-200 p-4 text-xs text-purple-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs">
+            <div className="flex items-start gap-2.5">
+              <span className="text-base text-purple-600 font-bold">✋</span>
+              <div>
+                <span className="font-bold text-purple-950">Awaiting your approval: </span>
+                <span>
+                  This step has finished generating and is ready for your review. You can make inline edits below or approve to proceed.
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+              <button
+                type="button"
+                disabled={approving || isAnyRunning}
+                onClick={async () => {
+                  setApproving(true);
+                  try {
+                    await onApprove?.(step.name, false);
+                  } finally {
+                    setApproving(false);
+                  }
+                }}
+                className="px-3 py-1.5 rounded-lg bg-white border border-purple-300 hover:bg-purple-100 text-purple-800 font-semibold text-xs transition cursor-pointer disabled:opacity-50"
+              >
+                Approve Step
+              </button>
+              <button
+                type="button"
+                disabled={approving || isAnyRunning}
+                onClick={async () => {
+                  setApproving(true);
+                  try {
+                    await onApprove?.(step.name, true);
+                  } finally {
+                    setApproving(false);
+                  }
+                }}
+                className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                {approving ? "Approving..." : "Approve & Next →"}
+              </button>
+            </div>
+          </div>
+        )}
         {/* Stuck Warning: running >= 5 minutes (300 seconds) */}
         {isRunning && elapsedSeconds >= 300 && (
           <div className="rounded-xl bg-amber-50 border border-amber-300 p-4 text-xs text-amber-900 flex items-start gap-3">
@@ -274,9 +341,37 @@ export function StepDetailPanel({
         {!isStale && !isPending && step.output && (
           <div>
             {isScript ? (
-              <ScriptOutputView output={step.output} />
+              <ScriptOutputView
+                output={step.output}
+                isSaving={isUpdating}
+                onSave={async (updated) => {
+                  setIsUpdating(true);
+                  try {
+                    await onUpdateContent?.(step.name, { script: updated }, "Inline script revision");
+                  } finally {
+                    setIsUpdating(false);
+                  }
+                }}
+              />
             ) : isStoryboard ? (
-              <StoryboardOutputView output={step.output} isMock={isMock} isStale={false} />
+              <StoryboardOutputView
+                output={step.output}
+                isMock={isMock}
+                isStale={false}
+                isSaving={isUpdating}
+                onSave={async (updatedScenes) => {
+                  setIsUpdating(true);
+                  try {
+                    await onUpdateContent?.(
+                      step.name,
+                      { storyboard: { scenes: updatedScenes } },
+                      "Inline storyboard scenes revision"
+                    );
+                  } finally {
+                    setIsUpdating(false);
+                  }
+                }}
+              />
             ) : isImages ? (
               <ImagesOutputView
                 videoId={videoId}
@@ -384,6 +479,17 @@ export function StepDetailPanel({
         onClose={() => setIsRerunOpen(false)}
         onConfirm={async (prompt) => {
           await onRerun(step.name, prompt);
+        }}
+      />
+
+      {/* History Modal Dialog */}
+      <StepHistoryModal
+        stepName={step.name}
+        videoId={videoId}
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onRollback={async (stepName, ver) => {
+          await onRollback?.(stepName, ver);
         }}
       />
     </div>
