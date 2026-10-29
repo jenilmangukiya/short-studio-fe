@@ -281,6 +281,7 @@ export const api = {
       const response = await fetch(`/api/videos/${id}/download?captioned=${captioned}`, {
         method: "GET",
         headers,
+        cache: "no-store",
       });
 
       if (!response.ok) {
@@ -384,7 +385,9 @@ export const api = {
     },
 
     async getSubtitles(videoId: string): Promise<SubtitleData> {
-      return request<SubtitleData>(`/api/videos/${videoId}/subtitles`);
+      return request<SubtitleData>(`/api/videos/${videoId}/subtitles`, {
+        cache: "no-store",
+      });
     },
   },
 };

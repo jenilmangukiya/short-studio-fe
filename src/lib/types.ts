@@ -46,12 +46,19 @@ export interface WordTimestamp {
   confidence?: number;
 }
 
+export type SubtitleTimingSource =
+  | "forced_alignment"
+  | "scene_waveform"
+  | "estimated"
+  | string;
+
 export interface SubtitleSegment {
   index: number;
   text: string;
   start: number;
   end: number;
   words: WordTimestamp[];
+  timing_source?: SubtitleTimingSource;
 }
 
 export interface SubtitleData {
@@ -59,6 +66,8 @@ export interface SubtitleData {
   format?: string;
   total_words?: number;
   total_duration_seconds?: number;
+  timing_source?: SubtitleTimingSource;
+  alignment_hash?: string | null;
   file?: string;
   vtt_file?: string;
   srt_file?: string;
@@ -71,6 +80,10 @@ export interface SubtitleMeta {
   task?: string;
   provider?: string;
   model?: string;
+  timing_source?: SubtitleTimingSource;
+  alignment_hash?: string | null;
+  audio_file?: string | null;
+  reused?: boolean;
   scenes_count?: number;
   words_count?: number;
   duration_seconds?: number;

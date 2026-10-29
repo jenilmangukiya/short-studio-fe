@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { SubtitleData, VideoDetail } from "@/lib/types";
 import { useObjectUrl } from "@/lib/object-url";
 import { SubtitleOverlay } from "./SubtitleOverlay";
 
@@ -14,6 +15,9 @@ interface VideoPlayerProps {
   showDownloadButton?: boolean;
   isReady?: boolean;
   isRendering?: boolean;
+  videoVersion?: string | null;
+  subtitlesVersion?: string | null;
+  initialSubtitles?: SubtitleData | null;
 }
 
 export function VideoPlayer({
@@ -24,11 +28,37 @@ export function VideoPlayer({
   showDownloadButton = true,
   isReady = true,
   isRendering = false,
+  videoVersion,
+  subtitlesVersion,
+  initialSubtitles,
 }: VideoPlayerProps) {
+  const queryClient = useQueryClient();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [downloadingType, setDownloadingType] = useState<"captioned" | "original" | null>(null);
   const [showSubtitles, setShowSubtitles] = useState(true);
+
+  // Derive step completion/revision tokens from cached VideoDetail when not explicitly passed,
+  // ensuring regenerating Render or Subtitles never serves a stale cached video blob or subtitle track.
+  const cachedVideo = queryClient.getQueryData<VideoDetail>(["video", videoId]);
+  const renderStep = cachedVideo?.steps?.find((s) => s.name.toLowerCase() === "render");
+  const subtitlesStep = cachedVideo?.steps?.find(
+    (s) => s.name.toLowerCase() === "subtitles" || s.name.toLowerCase() === "subtitle"
+  );
+  const isSubtitlesRunning = subtitlesStep?.status === "running";
+
+  const subtitlesStepOutput = subtitlesStep?.output as Record<string, unknown> | undefined;
+  const subtitlesMeta = subtitlesStepOutput?.meta as Record<string, unknown> | undefined;
+  const subtitlesPayload = subtitlesStepOutput?.subtitles as SubtitleData | undefined;
+
+  const resolvedVideoVersion =
+    videoVersion ?? renderStep?.finished_at ?? "default";
+  const resolvedSubtitlesVersion =
+    subtitlesVersion ??
+    (typeof subtitlesMeta?.alignment_hash === "string" ? subtitlesMeta.alignment_hash : undefined) ??
+    subtitlesPayload?.alignment_hash ??
+    subtitlesStep?.finished_at ??
+    "default";
 
   const shouldFetch = Boolean(videoId && isReady && !isRendering);
 
@@ -39,22 +69,25 @@ export function VideoPlayer({
     error,
     refetch,
   } = useQuery({
-    queryKey: ["video-blob", videoId],
+    queryKey: ["video-blob", videoId, resolvedVideoVersion],
     queryFn: () => api.videos.getVideoBlob(videoId, false),
     enabled: shouldFetch,
-    staleTime: 1000 * 60 * 15, // 15 mins cache
+    staleTime: 1000 * 60 * 15, // 15 mins cache per distinct render version
     gcTime: 1000 * 60 * 30,
     retry: 1,
   });
 
-  const { data: subtitlesData } = useQuery({
-    queryKey: ["video-subtitles", videoId],
+  const { data: fetchedSubtitles } = useQuery({
+    queryKey: ["video-subtitles", videoId, resolvedSubtitlesVersion],
     queryFn: () => api.videos.getSubtitles(videoId),
-    enabled: shouldFetch,
-    staleTime: 1000 * 60 * 15,
+    enabled: Boolean(shouldFetch && !isSubtitlesRunning),
+    initialData: initialSubtitles ?? undefined,
+    staleTime: 1000 * 60 * 15, // 15 mins cache per distinct alignment/step version
     gcTime: 1000 * 60 * 30,
     retry: false, // Don't retry if subtitles step is pending or 404
   });
+
+  const subtitlesData = isSubtitlesRunning ? undefined : (fetchedSubtitles ?? initialSubtitles);
 
   const hasSubtitles = Boolean(
     subtitlesData?.segments && subtitlesData.segments.length > 0

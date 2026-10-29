@@ -83,7 +83,14 @@ export function SubtitlesOutputView({
   const totalWords = subtitles.total_words ?? meta?.words_count ?? segments.reduce((sum, s) => sum + (s.words?.length || 0), 0);
   const totalDuration = subtitles.total_duration_seconds ?? meta?.duration_seconds ?? 0;
   const provider = meta?.provider || "acoustic";
-  const model = meta?.model || "waveform-aligner";
+  const model = meta?.model || "vosk-forced-aligner";
+  const timingSource =
+    meta?.timing_source ??
+    subtitles.timing_source ??
+    segments[0]?.timing_source ??
+    (isMock ? "estimated" : undefined);
+  const alignmentHash = meta?.alignment_hash ?? subtitles.alignment_hash ?? null;
+  const isReused = Boolean(meta?.reused);
 
   return (
     <div className="space-y-6">
@@ -116,9 +123,31 @@ export function SubtitlesOutputView({
           </div>
 
           {isReady ? (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 self-start sm:self-center">
-              ✓ Synchronized
-            </span>
+            <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-center">
+              {timingSource === "forced_alignment" && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  🎯 Forced Alignment
+                </span>
+              )}
+              {timingSource === "scene_waveform" && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                  🔊 Scene Waveform
+                </span>
+              )}
+              {timingSource === "estimated" && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                  ≈ Estimated Timing
+                </span>
+              )}
+              {isReused && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                  Cached
+                </span>
+              )}
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                ✓ Synchronized
+              </span>
+            </div>
           ) : isRunning ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 animate-pulse self-start sm:self-center">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-ping" />
@@ -202,6 +231,8 @@ export function SubtitlesOutputView({
           showDownloadButton={true}
           isReady={isReady}
           isRendering={isRunning}
+          subtitlesVersion={alignmentHash}
+          initialSubtitles={hasSegments ? subtitles : null}
         />
       </div>
 

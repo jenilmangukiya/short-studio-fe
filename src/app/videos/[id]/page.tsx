@@ -111,12 +111,18 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
     enabled: Boolean(channelId),
   });
 
+  const invalidateVideoQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+    queryClient.invalidateQueries({ queryKey: ["video-blob", videoId] });
+    queryClient.invalidateQueries({ queryKey: ["video-subtitles", videoId] });
+  };
+
   // Mutations
   const startMutation = useMutation({
     mutationFn: () => api.videos.start(videoId),
     onSuccess: () => {
       setActionError(null);
-      queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+      invalidateVideoQueries();
     },
     onError: (err) => setActionError(formatErrorMessage(err)),
   });
@@ -125,7 +131,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
     mutationFn: () => api.videos.next(videoId),
     onSuccess: () => {
       setActionError(null);
-      queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+      invalidateVideoQueries();
     },
     onError: (err) => setActionError(formatErrorMessage(err)),
   });
@@ -134,7 +140,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
     mutationFn: () => api.videos.runAll(videoId),
     onSuccess: () => {
       setActionError(null);
-      queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+      invalidateVideoQueries();
     },
     onError: (err) => setActionError(formatErrorMessage(err)),
   });
@@ -144,7 +150,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
       api.videos.rerunStep(videoId, stepName, prompt),
     onSuccess: () => {
       setActionError(null);
-      queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+      invalidateVideoQueries();
     },
     onError: (err) => setActionError(formatErrorMessage(err)),
   });
@@ -154,7 +160,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
       api.videos.approveStep(videoId, stepName, autoAdvance),
     onSuccess: () => {
       setActionError(null);
-      queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+      invalidateVideoQueries();
     },
     onError: (err) => setActionError(formatErrorMessage(err)),
   });
@@ -171,7 +177,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
     }) => api.videos.updateStepContent(videoId, stepName, output, summary),
     onSuccess: () => {
       setActionError(null);
-      queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+      invalidateVideoQueries();
     },
     onError: (err) => setActionError(formatErrorMessage(err)),
   });
@@ -181,7 +187,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
       api.videos.rollbackStep(videoId, stepName, version),
     onSuccess: () => {
       setActionError(null);
-      queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+      invalidateVideoQueries();
     },
     onError: (err) => setActionError(formatErrorMessage(err)),
   });

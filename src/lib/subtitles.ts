@@ -13,9 +13,17 @@ export interface ActiveSubtitleState {
   activeWordIndex: number;
 }
 
+const TERMINAL_PUNCT = /[.!?]["'”’)]*$/;
+const CLAUSE_PUNCT = /[,;:—–]["'”’)]*$/;
+const PAUSE_BREAK_SEC = 0.35;
+const CLAUSE_PAUSE_SEC = 0.15;
+const MAX_CAPTION_CHARS = 28;
+const TARGET_WORDS_PER_CHUNK = 4;
+const MAX_WORDS_PER_CHUNK = 5;
+
 /**
- * Determine chunk sizes for a segment of words such that each chunk contains
- * between 3 and 5 words (unless the entire segment has fewer than 3 words).
+ * Determine fallback chunk sizes for a segment of words such that each chunk
+ * contains between 3 and 5 words (unless the entire segment has fewer than 3 words).
  */
 export function getChunkSizes(totalWords: number): number[] {
   if (totalWords <= 0) return [];
@@ -50,7 +58,90 @@ export function getChunkSizes(totalWords: number): number[] {
 }
 
 /**
- * Group a segment's words into timed subtitle chunks (3-5 words each).
+ * Partition aligned words into readable subtitle chunks respecting sentence/clause
+ * punctuation, acoustic speech pauses, character length, and word count limits.
+ * Mirrors backend `_partition_words_into_captions` in `app/subtitles/types.py`.
+ */
+export function partitionWordsIntoChunks(words: WordTimestamp[]): WordTimestamp[][] {
+  if (!words || words.length === 0) return [];
+
+  const groups: WordTimestamp[][] = [];
+  let current: WordTimestamp[] = [];
+  let currentChars = 0;
+
+  for (let idx = 0; idx < words.length; idx++) {
+    const word = words[idx];
+    const wordText = (word.text || "").trim();
+    if (!wordText) continue;
+
+    const wordLen = wordText.length;
+    const projectedChars = currentChars === 0 ? wordLen : currentChars + 1 + wordLen;
+
+    if (
+      current.length > 0 &&
+      (projectedChars > MAX_CAPTION_CHARS || current.length >= MAX_WORDS_PER_CHUNK)
+    ) {
+      groups.push(current);
+      current = [];
+      currentChars = 0;
+    }
+
+    current.push(word);
+    currentChars = currentChars === 0 ? wordLen : currentChars + 1 + wordLen;
+
+    const isLast = idx === words.length - 1;
+    if (isLast) {
+      groups.push(current);
+      current = [];
+      currentChars = 0;
+      break;
+    }
+
+    const nextWord = words[idx + 1];
+    const gap = Math.max(0, nextWord.start - word.end);
+    const hasTerminal = TERMINAL_PUNCT.test(wordText);
+    const hasClause = CLAUSE_PUNCT.test(wordText);
+
+    const shouldBreak =
+      hasTerminal ||
+      gap >= PAUSE_BREAK_SEC ||
+      (hasClause && (current.length >= 2 || gap >= CLAUSE_PAUSE_SEC)) ||
+      (current.length >= TARGET_WORDS_PER_CHUNK && currentChars >= 18);
+
+    if (shouldBreak) {
+      groups.push(current);
+      current = [];
+      currentChars = 0;
+    }
+  }
+
+  if (current.length > 0) {
+    groups.push(current);
+  }
+
+  // Merge trailing single-word orphan into previous chunk if no pause/sentence boundary separates them
+  if (groups.length >= 2 && groups[groups.length - 1].length === 1) {
+    const prevGroup = groups[groups.length - 2];
+    const lastWord = groups[groups.length - 1][0];
+    const prevLast = prevGroup[prevGroup.length - 1];
+    const gap = Math.max(0, lastWord.start - prevLast.end);
+    const prevChars = prevGroup.reduce((sum, w) => sum + w.text.length, 0) + (prevGroup.length - 1);
+    if (
+      !TERMINAL_PUNCT.test(prevLast.text.trim()) &&
+      gap < PAUSE_BREAK_SEC &&
+      prevGroup.length < MAX_WORDS_PER_CHUNK &&
+      prevChars + 1 + lastWord.text.length <= MAX_CAPTION_CHARS + 4
+    ) {
+      prevGroup.push(lastWord);
+      groups.pop();
+    }
+  }
+
+  return groups;
+}
+
+/**
+ * Group a segment's words into timed subtitle chunks.
  */
 export function chunkWords(
   words: WordTimestamp[],
@@ -65,34 +156,35 @@ export function chunkWords(
   );
   if (validWords.length === 0) return [];
 
-  const sizes = getChunkSizes(validWords.length);
+  const groups = partitionWordsIntoChunks(validWords);
   const chunks: SubtitleChunk[] = [];
-  let wordOffset = 0;
 
-  for (let cIdx = 0; cIdx < sizes.length; cIdx++) {
-    const size = sizes[cIdx];
-    const chunkWordsSlice = validWords.slice(wordOffset, wordOffset + size);
-    const isLastChunk = cIdx === sizes.length - 1;
+  for (let cIdx = 0; cIdx < groups.length; cIdx++) {
+    const chunkWordsSlice = groups[cIdx];
+    const isLastChunk = cIdx === groups.length - 1;
 
     const chunkStart = chunkWordsSlice[0].start;
     const lastWord = chunkWordsSlice[chunkWordsSlice.length - 1];
-    const lastWordEnd = Math.max(chunkStart, lastWord.end);
+    const lastWordEnd = Math.max(chunkStart + 0.12, lastWord.end);
 
     let chunkEnd: number;
     if (!isLastChunk) {
-      const nextWord = validWords[wordOffset + size];
-      const nextStart = nextWord ? nextWord.start : lastWordEnd;
-      // If there is an abnormally long gap (> 0.4s) before the next chunk,
-      // let the current chunk fade out after 0.35s so text doesn't linger forever.
-      if (nextStart - lastWordEnd > 0.4) {
-        chunkEnd = lastWordEnd + 0.35;
+      const nextChunkStart = groups[cIdx + 1][0].start;
+      const gap = nextChunkStart - lastWordEnd;
+      if (gap > 0.4) {
+        chunkEnd = Math.min(nextChunkStart, Math.max(chunkStart + 0.6, lastWordEnd + 0.35));
       } else {
-        chunkEnd = Math.max(lastWordEnd, nextStart);
+        chunkEnd = Math.max(lastWordEnd, nextChunkStart);
       }
     } else {
-      // Last chunk in segment: hold for a natural reading pause (0.35s) or up to segmentEnd
-      const targetEnd = lastWordEnd + 0.35;
-      chunkEnd = segmentEnd ? Math.max(lastWordEnd, Math.min(segmentEnd, targetEnd)) : targetEnd;
+      // Hold for a natural reading pause (0.35s) at the end of the segment;
+      // if segmentEnd is strictly greater than lastWordEnd, respect it as an upper bound.
+      const desiredEnd = Math.max(chunkStart + 0.6, lastWordEnd + 0.35);
+      if (segmentEnd && segmentEnd > lastWordEnd + 0.05) {
+        chunkEnd = Math.max(lastWordEnd, Math.min(segmentEnd, desiredEnd));
+      } else {
+        chunkEnd = desiredEnd;
+      }
     }
 
     chunks.push({
@@ -102,15 +194,14 @@ export function chunkWords(
       start: chunkStart,
       end: chunkEnd,
     });
-
-    wordOffset += size;
   }
 
   return chunks;
 }
 
 /**
- * Build flat, sorted subtitle chunks across all segments for a video.
+ * Build flat, sorted subtitle chunks across all segments for a video,
+ * clamping consecutive chunk end times so cross-segment chunks never overlap.
  */
 export function buildAllChunks(subtitles: SubtitleData | null | undefined): SubtitleChunk[] {
   if (!subtitles || !Array.isArray(subtitles.segments) || subtitles.segments.length === 0) {
@@ -128,7 +219,27 @@ export function buildAllChunks(subtitles: SubtitleData | null | undefined): Subt
     allChunks.push(...segChunks);
   }
 
-  return allChunks.sort((a, b) => a.start - b.start);
+  allChunks.sort((a, b) => a.start - b.start);
+
+  // Prevent cross-segment overlap and smoothly bridge tiny inter-segment gaps
+  for (let i = 0; i < allChunks.length - 1; i++) {
+    const curr = allChunks[i];
+    const next = allChunks[i + 1];
+    if (next.start > curr.start) {
+      const lastWordEnd = Math.max(
+        curr.start + 0.12,
+        curr.words[curr.words.length - 1]?.end ?? curr.end
+      );
+      const gap = next.start - lastWordEnd;
+      if (gap >= 0 && gap <= 0.4) {
+        curr.end = next.start;
+      } else if (curr.end > next.start) {
+        curr.end = next.start;
+      }
+    }
+  }
+
+  return allChunks;
 }
 
 /**

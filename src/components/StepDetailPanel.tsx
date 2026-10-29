@@ -324,6 +324,16 @@ export function StepDetailPanel({
                       isRunning={isRunning}
                       stepStatus={step.status}
                     />
+                  ) : isSubtitles ? (
+                    <SubtitlesOutputView
+                      videoId={videoId}
+                      topic={topic}
+                      output={step.output}
+                      isMock={isMock}
+                      isStale={true}
+                      isRunning={isRunning}
+                      stepStatus={step.status}
+                    />
                   ) : (
                     <CollapsibleJson data={step.output} mock={isMock} defaultOpen={false} />
                   )}
