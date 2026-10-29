@@ -63,10 +63,15 @@ export function SubtitlesOutputView({
   const parsed = parseAndValidateSubtitles(output);
 
   const hasSegments = Boolean(parsed?.data?.segments && parsed.data.segments.length > 0);
+  const isCaptionedBurned = parsed?.meta?.captioned_burned !== false;
   const isReady =
-    (stepStatus === "done" || (!stepStatus && hasSegments)) &&
+    (stepStatus === "done" ||
+      stepStatus === "awaiting_approval" ||
+      (!stepStatus && hasSegments)) &&
     !isRunning &&
-    hasSegments;
+    !isStale &&
+    hasSegments &&
+    isCaptionedBurned;
 
   if (!parsed && !isRunning) {
     return (
@@ -127,11 +132,6 @@ export function SubtitlesOutputView({
               {timingSource === "forced_alignment" && (
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
                   🎯 Forced Alignment
-                </span>
-              )}
-              {timingSource === "scene_waveform" && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-                  🔊 Scene Waveform
                 </span>
               )}
               {timingSource === "estimated" && (
@@ -214,14 +214,20 @@ export function SubtitlesOutputView({
         </div>
       )}
 
-      {/* In-Browser Video Player with Subtitles */}
+      {/* In-Browser Video Player with Burned-In Subtitles */}
       <div className="rounded-2xl border border-slate-200 bg-slate-900/5 p-6 flex flex-col items-center">
         <div className="w-full max-w-md text-center mb-4">
           <h4 className="text-sm font-bold text-slate-800">
-            {isRunning ? "Aligning Subtitles..." : isReady ? "Live Subtitle Playback Preview" : "Subtitle Preview Pending"}
+            {isRunning
+              ? "Aligning & Burning Subtitles..."
+              : isStale || !isCaptionedBurned
+              ? "Captioned Video Outdated"
+              : isReady
+              ? "Burned-In Captioned Video Preview"
+              : "Captioned Video Preview Pending"}
           </h4>
           <p className="text-xs text-slate-500 mt-0.5">
-            Watch the video below to test real-time synchronized animated subtitles. Click the CC button to toggle.
+            Plays the exact burned-in captioned MP4 (final_video_captioned.mp4) that is exported on download.
           </p>
         </div>
 
@@ -231,6 +237,7 @@ export function SubtitlesOutputView({
           showDownloadButton={true}
           isReady={isReady}
           isRendering={isRunning}
+          isStale={isStale || !isCaptionedBurned}
           subtitlesVersion={alignmentHash}
           initialSubtitles={hasSegments ? subtitles : null}
         />

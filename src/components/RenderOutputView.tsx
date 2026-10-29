@@ -80,8 +80,11 @@ export function RenderOutputView({
 
   const hasVideoPath = Boolean(parsed?.video_path || parsed?.data?.video_path);
   const isReady =
-    (stepStatus === "done" || (!stepStatus && hasVideoPath)) &&
+    (stepStatus === "done" ||
+      stepStatus === "awaiting_approval" ||
+      (!stepStatus && hasVideoPath)) &&
     !isRunning &&
+    !isStale &&
     hasVideoPath;
 
   if (!parsed && !isRunning) {
@@ -221,6 +224,7 @@ export function RenderOutputView({
           showDownloadButton={true}
           isReady={isReady}
           isRendering={isRunning}
+          isStale={isStale}
         />
       </div>
 

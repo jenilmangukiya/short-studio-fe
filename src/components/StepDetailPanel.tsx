@@ -312,6 +312,8 @@ export function StepDetailPanel({
                       isMock={isMock}
                       isStale={true}
                       isRunning={isRunning}
+                      stepStatus={step.status}
+                      finishedAt={step.finished_at}
                       storyboardScenes={storyboardScenes}
                     />
                   ) : isRender ? (
@@ -398,6 +400,8 @@ export function StepDetailPanel({
                 isMock={isMock}
                 isStale={false}
                 isRunning={isRunning}
+                stepStatus={step.status}
+                finishedAt={step.finished_at}
                 storyboardScenes={storyboardScenes}
               />
             ) : isRender ? (
@@ -449,6 +453,8 @@ export function StepDetailPanel({
               isMock={isMock}
               isStale={false}
               isRunning={true}
+              stepStatus={step.status}
+              finishedAt={step.finished_at}
               storyboardScenes={storyboardScenes}
             />
           ) : isRender ? (

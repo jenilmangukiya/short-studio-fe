@@ -113,6 +113,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
 
   const invalidateVideoQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["video", videoId] });
+    queryClient.invalidateQueries({ queryKey: ["video-audio", videoId] });
     queryClient.invalidateQueries({ queryKey: ["video-blob", videoId] });
     queryClient.invalidateQueries({ queryKey: ["video-subtitles", videoId] });
   };
@@ -240,12 +241,12 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
     setStepInUrl(failedStepName);
   };
 
-  // File download handler
+  // File download handler (uses the same canonical captioned MP4 as VideoPlayer)
   const handleDownload = async () => {
     setActionError(null);
     setDownloading(true);
     try {
-      const { blob, filename } = await api.videos.downloadBlob(videoId);
+      const { blob, filename } = await api.videos.downloadBlob(videoId, true);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -360,7 +361,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                   >
                     <span>📥</span>
                     <span>
-                      {downloading ? "Preparing MP4..." : "Download Video (MP4)"}
+                      {downloading ? "Preparing MP4..." : "Download Captioned Video (MP4)"}
                     </span>
                   </button>
                 </div>
@@ -448,7 +449,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                       Full Short Video Ready
                     </h3>
                     <p className="text-[11px] text-slate-500">
-                      Stitched 1080x1920 vertical video with Kokoro audio & AI visuals.
+                      Stitched 1080x1920 vertical video with Kokoro audio, AI visuals &amp; burned-in captions (final_video_captioned.mp4).
                     </p>
                   </div>
                 </div>

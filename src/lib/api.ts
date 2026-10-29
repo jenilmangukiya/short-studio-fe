@@ -344,16 +344,17 @@ export const api = {
       return response.blob();
     },
 
-    async getSceneAudioBlob(videoId: string, sceneIndex: number): Promise<Blob> {
+    async getNarrationAudioBlob(videoId: string): Promise<Blob> {
       const token = getToken();
       const headers = new Headers();
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
 
-      const response = await fetch(`/api/videos/${videoId}/audio/${sceneIndex}`, {
+      const response = await fetch(`/api/videos/${videoId}/audio`, {
         method: "GET",
         headers,
+        cache: "no-store",
       });
 
       if (response.status === 401) {
@@ -366,7 +367,7 @@ export const api = {
       }
 
       if (!response.ok) {
-        let msg = `Failed to load scene ${sceneIndex} audio (${response.status})`;
+        let msg = `Failed to load narration audio (${response.status})`;
         try {
           const err = await response.json();
           if (err.detail) msg = err.detail;
@@ -379,7 +380,7 @@ export const api = {
       return response.blob();
     },
 
-    async getVideoBlob(videoId: string, captioned: boolean = false): Promise<Blob> {
+    async getVideoBlob(videoId: string, captioned: boolean = true): Promise<Blob> {
       const { blob } = await this.downloadBlob(videoId, captioned);
       return blob;
     },

@@ -48,7 +48,6 @@ export interface WordTimestamp {
 
 export type SubtitleTimingSource =
   | "forced_alignment"
-  | "scene_waveform"
   | "estimated"
   | string;
 
@@ -225,20 +224,32 @@ export interface ImagesStepOutput {
 
 export interface VoiceoverItem {
   index: number;
+  scene_id?: number | string;
   narration: string;
-  file?: string | null;
+  start_time?: number;
+  end_time?: number;
   duration_seconds: number;
+  timing_type?: "estimated" | "aligned" | string;
+  sample_rate?: number;
+  voice?: string;
+  speed?: number;
   latency_seconds?: number;
   status: "ok" | "failed" | string;
   reused: boolean;
   audio_hash?: string;
+  error?: string | null;
   [key: string]: unknown;
 }
 
 export interface VoiceoverData {
+  continuous?: boolean;
+  audio_file?: string | null;
+  narration_script?: string;
+  audio_hash?: string;
   items: VoiceoverItem[];
   complete: boolean;
   total_duration_seconds: number;
+  error?: string | null;
   [key: string]: unknown;
 }
 
@@ -253,16 +264,26 @@ export interface VoiceoverMeta {
   voice?: string;
   speed?: number;
   latency_seconds?: number;
+  continuous?: boolean;
+  chunks_count?: number;
+  inference_calls?: number;
+  audio_file?: string | null;
+  audio_hash?: string;
   mock?: boolean;
   [key: string]: unknown;
 }
 
 export interface VoiceoverStepOutput {
   voiceover?: VoiceoverData;
+  audio_file?: string | null;
+  file?: string | null;
+  narration_script?: string;
+  audio_hash?: string;
   duration_seconds?: number;
   warnings?: string[];
   meta?: VoiceoverMeta;
   mock?: boolean;
+  error?: string | null;
   [key: string]: unknown;
 }
 
