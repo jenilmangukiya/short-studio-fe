@@ -135,12 +135,59 @@ export interface ScriptStepOutput {
   [key: string]: unknown;
 }
 
+export type ImageStrategy =
+  | "reuse_scene_image"
+  | "reuse_previous_image"
+  | "new_image"
+  | string;
+
+export type BeatTimingType =
+  | "unassigned"
+  | "aligned"
+  | "fallback"
+  | string;
+
+export interface VisualBeat {
+  id: string;
+  scene_id?: string;
+  order: number;
+  narration_text: string;
+  start_time?: number | null;
+  end_time?: number | null;
+  duration_seconds?: number | null;
+  start_word_index?: number | null;
+  end_word_index?: number | null;
+  timing_type?: BeatTimingType;
+  visual_description?: string;
+  visual_purpose?: string;
+  shot_type?: string;
+  camera_angle?: string;
+  focal_point?: string;
+  visual_technique?: string;
+  image_strategy?: ImageStrategy;
+  source_image_id?: string | null;
+  [key: string]: unknown;
+}
+
 export interface StoryboardScene {
   index: number;
   narration: string;
   image_prompt: string;
   shot_type: string;
   est_seconds: number;
+  visual_purpose?: string;
+  camera_angle?: string;
+  focal_point?: string;
+  visual_technique?: string;
+  environment?: string;
+  uses_anchor?: boolean;
+  final_prompt?: string;
+  animation?: Record<string, unknown> | null;
+  visual_beats?: VisualBeat[];
+  start_time?: number | null;
+  end_time?: number | null;
+  duration_seconds?: number | null;
+  [key: string]: unknown;
 }
 
 export type StoryboardStyleSource = "channel" | "default";
@@ -150,6 +197,10 @@ export interface StoryboardData {
   style_source: StoryboardStyleSource | string;
   scenes: StoryboardScene[];
   total_seconds: number;
+  subject_anchor?: string;
+  environment_anchor?: string;
+  total_visual_beats?: number;
+  [key: string]: unknown;
 }
 
 export interface StoryboardMeta {
@@ -224,6 +275,7 @@ export interface ImagesStepOutput {
 
 export interface VoiceoverItem {
   index: number;
+  scene_index?: number;
   scene_id?: number | string;
   narration: string;
   start_time?: number;
@@ -238,6 +290,7 @@ export interface VoiceoverItem {
   reused: boolean;
   audio_hash?: string;
   error?: string | null;
+  visual_beats?: VisualBeat[];
   [key: string]: unknown;
 }
 
@@ -287,6 +340,35 @@ export interface VoiceoverStepOutput {
   [key: string]: unknown;
 }
 
+export interface RenderAnimationItem {
+  scene_index?: number;
+  render_mode?: "visual_beat" | "beat" | "scene" | string;
+  start_time?: number;
+  end_time?: number;
+  frames?: number;
+  // Beat-specific fields (present when render_mode === "visual_beat" or "beat")
+  beat_id?: string;
+  beat_order?: number;
+  beat_fallback_reason?: string | null;
+  feasibility_status?: "safe_reuse" | "questionable_reuse" | "new_image_needed" | string;
+  image_file?: string;
+  fallback_applied?: boolean | string | null;
+  fallback_reason?: string | null;
+  warnings?: string[];
+  // Camera & motion fields
+  animation_type?: string;
+  focal_point?: string;
+  focal_coords?: [number, number];
+  start_coords?: [number, number];
+  end_coords?: [number, number];
+  start_scale?: number;
+  end_scale?: number;
+  intensity?: string;
+  duration_seconds?: number;
+  reasoning?: string;
+  [key: string]: unknown;
+}
+
 export interface RenderData {
   video_path?: string;
   duration_seconds?: number;
@@ -296,8 +378,75 @@ export interface RenderData {
   audio_codec?: string;
   file_size_bytes?: number;
   scenes_rendered?: number;
+  beats_rendered?: number;
+  render_mode?: "visual_beats" | "beat" | "scene" | string;
+  beat_fallback_reasons?: Record<number | string, string>;
+  timing_source?: "aligned" | "estimated" | string;
+  alignment_hash?: string | null;
+  audio_source?: string;
+  audio_file?: string | null;
+  animations?: RenderAnimationItem[];
   [key: string]: unknown;
 }
+
+export type BeatTelemetryStatus =
+  | "rendered"
+  | "scene_fallback"
+  | "unavailable"
+  | "stale";
+
+export interface BeatTelemetryRendered {
+  status: "rendered";
+  sceneIndex: number;
+  beatId: string;
+  beatOrder: number;
+  animation: RenderAnimationItem;
+  frames?: number;
+  durationSeconds: number;
+  startTime?: number;
+  endTime?: number;
+  feasibilityStatus?: string;
+  fallbackApplied?: boolean | string | null;
+  fallbackReason?: string | null;
+  isStale: false;
+}
+
+export interface BeatTelemetrySceneFallback {
+  status: "scene_fallback";
+  sceneIndex: number;
+  beatId: string;
+  beatOrder: number;
+  fallbackReason: string;
+  beatFallbackReason?: string;
+  animation?: RenderAnimationItem;
+  sceneAnimation?: RenderAnimationItem;
+  isStale: false;
+}
+
+export interface BeatTelemetryUnavailable {
+  status: "unavailable";
+  sceneIndex: number;
+  beatId: string;
+  beatOrder: number;
+  reason?: string;
+  isStale: false;
+}
+
+export interface BeatTelemetryStale {
+  status: "stale";
+  sceneIndex: number;
+  beatId: string;
+  beatOrder: number;
+  previousStatus: "rendered" | "scene_fallback" | "unavailable";
+  previousAnimation?: RenderAnimationItem;
+  isStale: true;
+}
+
+export type BeatTelemetryInfo =
+  | BeatTelemetryRendered
+  | BeatTelemetrySceneFallback
+  | BeatTelemetryUnavailable
+  | BeatTelemetryStale;
 
 export interface RenderMeta {
   task?: string;

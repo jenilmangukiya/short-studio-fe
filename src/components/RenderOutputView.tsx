@@ -1,8 +1,22 @@
 "use client";
 
-import type { RenderData, RenderMeta, StepStatus } from "@/lib/types";
+import { useMemo } from "react";
+import type {
+  RenderData,
+  RenderMeta,
+  StepOut,
+  StepStatus,
+  StoryboardScene,
+  VoiceoverItem,
+} from "@/lib/types";
+import {
+  correlateBeatsWithTelemetry,
+  parseStepTimestamp,
+  type BeatCorrelationResult,
+} from "@/lib/storyboard";
 import { VideoPlayer } from "./VideoPlayer";
 import { CollapsibleJson } from "./CollapsibleJson";
+import { StoryboardTimeline } from "./StoryboardTimeline";
 
 interface RenderOutputViewProps {
   videoId: string;
@@ -12,6 +26,11 @@ interface RenderOutputViewProps {
   isStale?: boolean;
   isRunning?: boolean;
   stepStatus?: StepStatus | string;
+  renderStep?: { finished_at?: string | null } | StepOut | null;
+  finishedAt?: string | null;
+  storyboardScenes?: StoryboardScene[];
+  voiceoverItems?: VoiceoverItem[];
+  correlation?: BeatCorrelationResult | null;
 }
 
 interface ValidatedRenderOutput {
@@ -75,8 +94,25 @@ export function RenderOutputView({
   isStale = false,
   isRunning = false,
   stepStatus,
+  renderStep,
+  finishedAt: propFinishedAt,
+  storyboardScenes,
+  voiceoverItems,
+  correlation: propCorrelation,
 }: RenderOutputViewProps) {
-  const parsed = parseAndValidateRender(output);
+  const parsed = useMemo(() => parseAndValidateRender(output), [output]);
+  const renderData = parsed?.data ?? null;
+
+  const correlation = useMemo(() => {
+    if (propCorrelation) return propCorrelation;
+    if (!storyboardScenes || storyboardScenes.length === 0) return null;
+    return correlateBeatsWithTelemetry({
+      scenes: storyboardScenes,
+      voiceoverItems,
+      renderData,
+      isRenderStale: isStale,
+    });
+  }, [propCorrelation, storyboardScenes, voiceoverItems, renderData, isStale]);
 
   const hasVideoPath = Boolean(parsed?.video_path || parsed?.data?.video_path);
   const isReady =
@@ -86,6 +122,19 @@ export function RenderOutputView({
     !isRunning &&
     !isStale &&
     hasVideoPath;
+
+  const rawFinishedAt =
+    renderStep?.finished_at !== undefined
+      ? renderStep.finished_at
+      : propFinishedAt !== undefined
+      ? propFinishedAt
+      : (parsed?.meta as Record<string, unknown> | undefined)?.finished_at ??
+        (output && typeof output === "object"
+          ? ((output as Record<string, unknown>).finished_at as string | undefined) ??
+            ((output as Record<string, unknown>).render as Record<string, unknown> | undefined)?.finished_at as string | undefined
+          : undefined);
+
+  const isTimestampVerified = parseStepTimestamp(rawFinishedAt) !== null;
 
   if (!parsed && !isRunning) {
     return (
@@ -135,7 +184,7 @@ export function RenderOutputView({
 
           {isReady ? (
             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 self-start sm:self-center">
-              ✓ 1080x1920 Ready
+              ✓ 1080x1920 {isTimestampVerified ? "Ready" : "Ready (Unverified)"}
             </span>
           ) : isRunning ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 animate-pulse self-start sm:self-center">
@@ -202,6 +251,51 @@ export function RenderOutputView({
           </ul>
         </div>
       )}
+
+      {/* Storyboard & Render Execution Timeline */}
+      {correlation ? (
+        <StoryboardTimeline
+          correlation={correlation}
+          totalDurationSeconds={duration > 0 ? duration : undefined}
+          title="Render Execution & Beat Timeline"
+        />
+      ) : renderData?.animations && renderData.animations.length > 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pb-2 border-b border-slate-100">
+            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+              <span>🎬</span> Rendered Animations Telemetry ({renderData.animations.length})
+            </h4>
+            <span className="text-[11px] text-slate-400 italic">
+              Storyboard structure unavailable; showing renderer records directly
+            </span>
+          </div>
+          <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto text-xs">
+            {renderData.animations.map((anim, idx) => (
+              <div key={idx} className="py-2 flex items-center justify-between">
+                <span className="font-semibold text-slate-700">
+                  Scene {anim.scene_index}
+                  {anim.beat_order ? ` • Beat #${anim.beat_order}` : ""}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[10px]">
+                    {anim.animation_type}
+                  </span>
+                  {anim.frames && (
+                    <span className="text-slate-500 font-mono text-[10px]">
+                      {anim.frames}f
+                    </span>
+                  )}
+                  {anim.beat_fallback_reason && (
+                    <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px]">
+                      ⚠️ Fallback: {anim.beat_fallback_reason}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Video Preview Card */}
       <div className="rounded-2xl border border-slate-200 bg-slate-900/5 p-6 flex flex-col items-center">

@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { StepOut, StepStatus, StoryboardScene } from "@/lib/types";
+import type {
+  ImageItem,
+  RenderData,
+  StepOut,
+  StepStatus,
+  StoryboardScene,
+  VoiceoverItem,
+} from "@/lib/types";
 import { ScriptOutputView } from "./ScriptOutputView";
 import { StoryboardOutputView } from "./StoryboardOutputView";
 import { ImagesOutputView } from "./ImagesOutputView";
@@ -11,6 +18,7 @@ import { SubtitlesOutputView } from "./SubtitlesOutputView";
 import { CollapsibleJson } from "./CollapsibleJson";
 import { RerunModal } from "./RerunModal";
 import { StepHistoryModal } from "./StepHistoryModal";
+import { evaluateRenderStaleness } from "@/lib/storyboard";
 
 interface StepDetailPanelProps {
   step: StepOut;
@@ -110,6 +118,58 @@ export function StepDetailPanel({
   const storyboardScenes = Array.isArray(rawStoryboardData?.scenes)
     ? (rawStoryboardData?.scenes as StoryboardScene[])
     : undefined;
+
+  // Extract images step output if available to enrich storyboard beat thumbnails
+  const imagesStep = allSteps.find((s) => s.name.toLowerCase() === "images");
+  const rawImagesOutput = imagesStep?.output as Record<string, unknown> | undefined;
+  const imageItems: ImageItem[] | undefined = (() => {
+    if (!rawImagesOutput || typeof rawImagesOutput !== "object") return undefined;
+    if (
+      rawImagesOutput.images &&
+      typeof rawImagesOutput.images === "object" &&
+      !Array.isArray(rawImagesOutput.images)
+    ) {
+      const imgObj = rawImagesOutput.images as Record<string, unknown>;
+      if (Array.isArray(imgObj.items)) return imgObj.items as ImageItem[];
+    }
+    if (Array.isArray(rawImagesOutput.items)) return rawImagesOutput.items as ImageItem[];
+    if (Array.isArray(rawImagesOutput.images)) return rawImagesOutput.images as ImageItem[];
+    return undefined;
+  })();
+
+  // Extract voiceover items to enrich storyboard beats with word-aligned continuous timing
+  const voiceoverStep = allSteps.find((s) => s.name.toLowerCase() === "voiceover");
+  const rawVoiceoverOutput = voiceoverStep?.output as Record<string, unknown> | undefined;
+  const voiceoverItems: VoiceoverItem[] | undefined = (() => {
+    if (!rawVoiceoverOutput || typeof rawVoiceoverOutput !== "object") return undefined;
+    if (
+      rawVoiceoverOutput.voiceover &&
+      typeof rawVoiceoverOutput.voiceover === "object" &&
+      !Array.isArray(rawVoiceoverOutput.voiceover)
+    ) {
+      const voObj = rawVoiceoverOutput.voiceover as Record<string, unknown>;
+      if (Array.isArray(voObj.items)) return voObj.items as VoiceoverItem[];
+    }
+    if (Array.isArray(rawVoiceoverOutput.items)) return rawVoiceoverOutput.items as VoiceoverItem[];
+    return undefined;
+  })();
+
+  // Extract render output to enrich storyboard beats with telemetry
+  const renderStep = allSteps.find((s) => s.name.toLowerCase() === "render");
+  const isRenderStale = evaluateRenderStaleness({
+    renderStep,
+    storyboardStep,
+    imagesStep,
+    voiceoverStep,
+    isRender,
+    isStale,
+  });
+  const renderData: RenderData | null = (() => {
+    if (!renderStep?.output || typeof renderStep.output !== "object") return null;
+    const rawRender = renderStep.output as Record<string, unknown>;
+    const renderPayload = (rawRender.render || rawRender) as Record<string, unknown>;
+    return renderPayload as unknown as RenderData;
+  })();
 
   return (
     <div
@@ -295,7 +355,16 @@ export function StepDetailPanel({
                   {isScript ? (
                     <ScriptOutputView output={step.output} />
                   ) : isStoryboard ? (
-                    <StoryboardOutputView output={step.output} isMock={isMock} isStale={true} />
+                    <StoryboardOutputView
+                      output={step.output}
+                      isMock={isMock}
+                      isStale={true}
+                      videoId={videoId}
+                      imageItems={imageItems}
+                      voiceoverItems={voiceoverItems}
+                      renderData={renderData}
+                      isRenderStale={isRenderStale}
+                    />
                   ) : isImages ? (
                     <ImagesOutputView
                       videoId={videoId}
@@ -325,6 +394,8 @@ export function StepDetailPanel({
                       isStale={true}
                       isRunning={isRunning}
                       stepStatus={step.status}
+                      storyboardScenes={storyboardScenes}
+                      voiceoverItems={voiceoverItems}
                     />
                   ) : isSubtitles ? (
                     <SubtitlesOutputView
@@ -371,6 +442,11 @@ export function StepDetailPanel({
                 isMock={isMock}
                 isStale={false}
                 isSaving={isUpdating}
+                videoId={videoId}
+                imageItems={imageItems}
+                voiceoverItems={voiceoverItems}
+                renderData={renderData}
+                isRenderStale={isRenderStale}
                 onSave={async (updatedScenes) => {
                   setIsUpdating(true);
                   try {
@@ -410,9 +486,11 @@ export function StepDetailPanel({
                 topic={topic}
                 output={step.output}
                 isMock={isMock}
-                isStale={false}
+                isStale={isRenderStale}
                 isRunning={isRunning}
                 stepStatus={step.status}
+                storyboardScenes={storyboardScenes}
+                voiceoverItems={voiceoverItems}
               />
             ) : isSubtitles ? (
               <SubtitlesOutputView
