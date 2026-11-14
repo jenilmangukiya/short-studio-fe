@@ -29,7 +29,9 @@ export interface StepRevision {
 }
 
 export const PIPELINE_STEP_NAMES = [
+  "creative_direction",
   "script",
+  "video_bible",
   "storyboard",
   "images",
   "voiceover",
@@ -489,3 +491,157 @@ export interface ApiValidationError {
 export interface ApiErrorResponse {
   detail?: string | ApiValidationError[];
 }
+
+// ============================================================================
+// Creative Direction & Video Director Types (Phase 1)
+// ============================================================================
+
+export interface EmotionalBeat {
+  phase: "hook" | "setup" | "complication" | "reveal" | "resolution";
+  target_emotion: string;
+  visual_intent: string;
+}
+
+export interface ProtagonistConfig {
+  character_count: "none" | "single" | "ensemble";
+  archetype_summary?: string | null;
+}
+
+export interface CreativeDirectionOutput {
+  format_archetype: string;
+  storytelling_angle: string;
+  central_thesis: string;
+  tone: string;
+  visual_genre: "photorealistic_cinematic" | "styled_3d" | "stickman_illustrated" | "technical_schematic" | "mixed_format";
+  protagonist_config: ProtagonistConfig;
+  emotional_progression?: EmotionalBeat[];
+  creative_constraints?: string[];
+}
+
+export interface CharacterEntity {
+  id: string;
+  name: string;
+  role: string;
+  visual_anchor: string;
+  apparel_anchor: string;
+  forbidden_mutations?: string[];
+}
+
+export interface EnvironmentEntity {
+  id: string;
+  name: string;
+  spatial_layout: string;
+  lighting_setup: string;
+  persistent_props?: string[];
+  time_of_day?: string;
+}
+
+export interface ObjectEntity {
+  id: string;
+  name: string;
+  visual_description: string;
+  material_and_finish: string;
+}
+
+export interface ConceptEntity {
+  id: string;
+  name: string;
+  concept_explained: string;
+  visual_analogy: string;
+  graphical_elements?: string[];
+}
+
+export interface EntityCatalog {
+  characters?: CharacterEntity[];
+  environments?: EnvironmentEntity[];
+  objects?: ObjectEntity[];
+  concepts?: ConceptEntity[];
+}
+
+export interface ArtDirection {
+  style_family: string;
+  rendering_engine_flavor?: string;
+  primary_palette_hex?: string[];
+  negative_prompt_tokens?: string;
+}
+
+export interface CinematographyProfile {
+  aspect_ratio: string;
+  subject_safe_zone: string;
+  caption_safe_zone: string;
+}
+
+export interface FoleySound {
+  id: string;
+  cue_name: string;
+  asset_file: string;
+}
+
+export interface AudioDirection {
+  voice_identifier: string;
+  default_speech_speed: number;
+  ambient_bed_track?: string | null;
+  music_bed_track?: string | null;
+  music_duck_db?: number;
+  foley_palette?: FoleySound[];
+}
+
+export interface SubtitleProfile {
+  font_family: string;
+  font_size_pt: number;
+  primary_color_hex: string;
+  highlight_color_hex: string;
+  margin_vertical_px: number;
+}
+
+export interface VideoBibleOutput {
+  bible_id: string;
+  topic_summary: string;
+  entities?: EntityCatalog;
+  art_direction?: ArtDirection;
+  cinematography?: CinematographyProfile;
+  audio_direction?: AudioDirection;
+  subtitle_direction?: SubtitleProfile;
+}
+
+export interface EntityBindings {
+  character_id?: string | null;
+  environment_id: string;
+  object_ids?: string[];
+  concept_id?: string | null;
+}
+
+export interface CameraDirection {
+  shot_type: "extreme_close_up" | "close_up" | "medium_close_up" | "medium" | "wide" | "extreme_wide";
+  camera_angle: "eye_level" | "low_angle" | "high_angle" | "top_down" | "side_profile" | "dutch_angle";
+  focal_point_description?: string;
+  movement_type?: "static" | "push_in" | "pull_out" | "pan_left" | "pan_right" | "drift";
+}
+
+export interface CharacterState {
+  pose_description: string;
+  expression_description: string;
+  action_in_progress: string;
+}
+
+export interface FoleyCue {
+  foley_id: string;
+  offset_seconds?: number;
+  relative_volume?: number;
+}
+
+export interface StoryboardBeat {
+  beat_id: string;
+  scene_index: number;
+  order: number;
+  narration_slice: string;
+  duration_est_seconds: number;
+  entity_bindings: EntityBindings;
+  transition_from_previous?: "establishing" | "same_scene_reframe" | "action_reaction" | "spatial_cutaway" | "location_change" | "explanatory_cutaway" | "surreal_metaphor" | "resolution_return";
+  continuity_intent?: string;
+  camera: CameraDirection;
+  character_state?: CharacterState | null;
+  environment_state_override?: string | null;
+  foley_cues?: FoleyCue[];
+}
+
