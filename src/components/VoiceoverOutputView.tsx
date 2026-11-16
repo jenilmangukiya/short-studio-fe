@@ -270,7 +270,7 @@ export function VoiceoverOutputView({
     Boolean(parsed.meta?.scenes_reused && parsed.meta.scenes_reused > 0) ||
     (okItems.length > 0 && okItems.every((it) => it.reused));
 
-  const voiceName = parsed.meta?.voice || "af_heart";
+  const voiceName = parsed.meta?.voice || "am_adam";
   const speed = parsed.meta?.speed ? `${parsed.meta.speed}x` : "1.0x";
   const provider = parsed.meta?.provider || (isMock ? "mock" : "kokoro");
   const model = parsed.meta?.model || (isMock ? "Mock TTS" : "kokoro-82m");
