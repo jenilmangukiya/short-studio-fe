@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { StepOut, SubtitleData, VideoDetail } from "@/lib/types";
+import type { StepOut, SubtitleData, SubtitleStyleId, VideoDetail } from "@/lib/types";
 import { useObjectUrl } from "@/lib/object-url";
+import { SubtitleOverlay } from "./SubtitleOverlay";
 
 interface VideoPlayerProps {
   videoId: string;
@@ -18,6 +19,10 @@ interface VideoPlayerProps {
   videoVersion?: string | null;
   subtitlesVersion?: string | null;
   initialSubtitles?: SubtitleData | null;
+  // Subtitle style preview props
+  useSubtitleOverlay?: boolean;
+  previewStyleId?: SubtitleStyleId | null;
+  appliedStyleId?: SubtitleStyleId | null;
 }
 
 export function VideoPlayer({
@@ -32,6 +37,9 @@ export function VideoPlayer({
   videoVersion,
   subtitlesVersion,
   initialSubtitles,
+  useSubtitleOverlay = false,
+  previewStyleId,
+  appliedStyleId,
 }: VideoPlayerProps) {
   const queryClient = useQueryClient();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -152,7 +160,27 @@ export function VideoPlayer({
     storyboardStep?.revisions_count ?? 0,
   ].join("|");
 
-  const shouldFetch = isCaptionedReady;
+  const isRenderOutdated = Boolean(
+    isStale ||
+      upstreamOfRender.some((s) => s.status === "stale") ||
+      renderStep?.status === "stale"
+  );
+
+  const isOverlayPreviewReady = Boolean(
+    videoId &&
+      isReady &&
+      !isActivelyProcessing &&
+      isCleanRenderReady &&
+      !isRenderOutdated
+  );
+
+  const isOutdatedState = useSubtitleOverlay ? isRenderOutdated : isCaptionedOutdated;
+  const isReadyState = useSubtitleOverlay ? isOverlayPreviewReady : isCaptionedReady;
+  const shouldFetch = isReadyState;
+
+  const queryKey = useSubtitleOverlay
+    ? ["video-blob", videoId, "uncaptioned", resolvedVideoVersion]
+    : ["video-blob", videoId, "captioned", resolvedCaptionedVersion];
 
   const {
     data: blob,
@@ -161,8 +189,8 @@ export function VideoPlayer({
     error,
     refetch,
   } = useQuery({
-    queryKey: ["video-blob", videoId, "captioned", resolvedCaptionedVersion],
-    queryFn: () => api.videos.getVideoBlob(videoId, true),
+    queryKey,
+    queryFn: () => api.videos.getVideoBlob(videoId, !useSubtitleOverlay),
     enabled: shouldFetch,
     staleTime: 1000 * 60 * 15, // 15 mins cache per distinct captioned render version
     gcTime: 1000 * 60 * 30,
@@ -254,29 +282,35 @@ export function VideoPlayer({
         )}
 
         {/* 2. Outdated / Stale Captioned Output Placeholder */}
-        {!isActivelyProcessing && isCaptionedOutdated && (
+        {!isActivelyProcessing && isOutdatedState && (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950 border border-amber-500/30 text-amber-200">
             <span className="text-3xl mb-2">⏳</span>
-            <p className="text-sm font-bold text-amber-300">Captioned Video Outdated</p>
+            <p className="text-sm font-bold text-amber-300">
+              {useSubtitleOverlay ? "Render Output Outdated" : "Captioned Video Outdated"}
+            </p>
             <p className="text-xs text-amber-200/80 mt-1.5 max-w-[240px] leading-relaxed">
-              Narration, render, or subtitle data changed. Advance the pipeline to regenerate{" "}
-              <span className="font-mono text-[11px] text-amber-100">final_video_captioned.mp4</span>{" "}
-              before playback or export.
+              {useSubtitleOverlay
+                ? "Narration or scene data changed. Advance the pipeline to regenerate final_video.mp4 before preview."
+                : "Narration, render, or subtitle data changed. Advance the pipeline to regenerate final_video_captioned.mp4 before playback or export."}
             </p>
           </div>
         )}
 
         {/* 3. Pending / Not Ready Placeholder */}
-        {!isActivelyProcessing && !isCaptionedOutdated && !isCaptionedReady && (
+        {!isActivelyProcessing && !isOutdatedState && !isReadyState && (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950 text-slate-400">
             <span className="text-3xl mb-2 opacity-60">⏳</span>
             <p className="text-sm font-semibold text-slate-200">
-              {isRenderDone && !isSubtitlesDone
+              {useSubtitleOverlay
+                ? "Base Video Not Rendered Yet"
+                : isRenderDone && !isSubtitlesDone
                 ? "Captioned Video Pending Subtitles Step"
                 : "Captioned Video Not Rendered Yet"}
             </p>
             <p className="text-xs text-slate-400 mt-1.5 max-w-[235px] leading-relaxed">
-              {isRenderDone && !isSubtitlesDone
+              {useSubtitleOverlay
+                ? "Complete the Render step to generate the base uncaptioned video for style preview."
+                : isRenderDone && !isSubtitlesDone
                 ? "Base video is rendered. Run the Subtitles step next to burn synchronized captions into final_video_captioned.mp4."
                 : "Complete the Render and Subtitles steps to generate the burned-in captioned video."}
             </p>
@@ -287,9 +321,13 @@ export function VideoPlayer({
         {shouldFetch && isLoading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950 text-slate-400">
             <div className="h-10 w-10 animate-spin rounded-full border-3 border-indigo-500 border-t-transparent mb-3" />
-            <p className="text-sm font-semibold text-slate-200">Loading Captioned Video...</p>
+            <p className="text-sm font-semibold text-slate-200">
+              {useSubtitleOverlay ? "Loading Preview Video..." : "Loading Captioned Video..."}
+            </p>
             <p className="text-xs text-slate-500 mt-1">
-              Retrieving burned-in 1080x1920 MP4 (final_video_captioned.mp4)
+              {useSubtitleOverlay
+                ? "Retrieving uncaptioned base video (final_video.mp4)"
+                : "Retrieving burned-in 1080x1920 MP4 (final_video_captioned.mp4)"}
             </p>
           </div>
         )}
@@ -299,15 +337,21 @@ export function VideoPlayer({
           isNotAvailableYet ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950 text-slate-400">
               <div className="h-10 w-10 animate-spin rounded-full border-3 border-indigo-400 border-t-transparent mb-3" />
-              <p className="text-sm font-semibold text-slate-200">Captioned video being finalized...</p>
+              <p className="text-sm font-semibold text-slate-200">
+                {useSubtitleOverlay ? "Preview video being finalized..." : "Captioned video being finalized..."}
+              </p>
               <p className="text-xs text-slate-500 mt-1 max-w-[220px]">
-                The burned-in captioned MP4 is still being finalized. It will appear once ready.
+                {useSubtitleOverlay
+                  ? "The base video is still being finalized. It will appear once ready."
+                  : "The burned-in captioned MP4 is still being finalized. It will appear once ready."}
               </p>
             </div>
           ) : isErrorOutdated ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950 border border-amber-500/30 text-amber-200">
               <span className="text-3xl mb-2">⏳</span>
-              <p className="text-sm font-bold text-amber-300">Captioned Video Outdated</p>
+              <p className="text-sm font-bold text-amber-300">
+                {useSubtitleOverlay ? "Video Output Outdated" : "Captioned Video Outdated"}
+              </p>
               <p className="text-xs text-amber-200/80 mt-1 max-w-[240px]">
                 {errorMessage}
               </p>
@@ -315,7 +359,9 @@ export function VideoPlayer({
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-950 border border-red-900/50 text-red-200">
               <span className="text-3xl mb-2">⚠️</span>
-              <p className="text-sm font-bold text-red-300">Unable to load captioned video</p>
+              <p className="text-sm font-bold text-red-300">
+                {useSubtitleOverlay ? "Unable to load preview video" : "Unable to load captioned video"}
+              </p>
               <p className="text-xs text-red-400 mt-1 max-w-[240px]">
                 {errorMessage}
               </p>
@@ -330,7 +376,7 @@ export function VideoPlayer({
           )
         )}
 
-        {/* 6. HTML5 Video Player (plays final_video_captioned.mp4 directly without live CSS overlay) */}
+        {/* 6. HTML5 Video Player */}
         {shouldFetch && videoUrl && !isError && (
           <>
             <video
@@ -343,6 +389,16 @@ export function VideoPlayer({
               onPause={() => setIsPlaying(false)}
               className="w-full h-full object-cover"
             />
+
+            {/* Live in-browser subtitle style overlay for uncaptioned preview */}
+            {useSubtitleOverlay && (
+              <SubtitleOverlay
+                videoRef={videoRef}
+                subtitles={subtitlesPayload}
+                visible={true}
+                styleId={previewStyleId ?? appliedStyleId ?? subtitlesPayload?.style}
+              />
+            )}
 
             {/* Quick Play/Pause Big Center Overlay (only when paused) */}
             {!isPlaying && (

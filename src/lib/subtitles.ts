@@ -1,4 +1,11 @@
-import type { SubtitleData, WordTimestamp } from "./types";
+import type {
+  SubtitleData,
+  SubtitleStyleId,
+  WordTimestamp,
+} from "./types.ts";
+
+export const DEFAULT_SUBTITLE_STYLE_ID = "clean_cinematic" as const;
+export type { SubtitleStyleId };
 
 export interface SubtitleChunk {
   id: string;
@@ -11,6 +18,87 @@ export interface SubtitleChunk {
 export interface ActiveSubtitleState {
   chunk: SubtitleChunk | null;
   activeWordIndex: number;
+}
+
+export interface SubtitleWordStyle {
+  color: string;
+  scale: number;
+  textTransform: "uppercase" | "none";
+  textStroke?: string;
+  paintOrder?: string;
+  textShadow?: string;
+  fontFamily?: string;
+  fontWeight?: number | string;
+}
+
+/**
+ * Resolves a subtitle style ID to a canonical supported style.
+ * Safely falls back to "clean_cinematic" for legacy records, null, undefined,
+ * or unknown style IDs.
+ */
+export function resolveSubtitleStyleId(styleId?: string | null): SubtitleStyleId {
+  if (!styleId || typeof styleId !== "string") {
+    return DEFAULT_SUBTITLE_STYLE_ID;
+  }
+  const norm = styleId.trim().toLowerCase();
+  if (norm === "clean_cinematic" || norm === "remotion_neon" || norm === "dynamic_highlight") {
+    return norm;
+  }
+  return DEFAULT_SUBTITLE_STYLE_ID;
+}
+
+/**
+ * Return computed typography and visual attributes for a word according to the style ID
+ * and active/inactive state.
+ */
+export function getSubtitleWordStyle(
+  styleId: string | null | undefined,
+  isActive: boolean
+): SubtitleWordStyle {
+  const resolved = resolveSubtitleStyleId(styleId);
+
+  if (resolved === "remotion_neon") {
+    return {
+      color: isActive ? "#28F5FC" : "#FFFFFF",
+      scale: isActive ? 1.06 : 1.0,
+      textTransform: "none",
+      textStroke: "2.5px #000000",
+      paintOrder: "stroke fill",
+      textShadow: isActive
+        ? "0 0 25px rgba(40, 245, 252, 0.9), 0 4px 10px rgba(0, 0, 0, 0.9)"
+        : "0 4px 12px rgba(0, 0, 0, 0.95), 0 2px 4px rgba(0, 0, 0, 0.8)",
+      fontFamily:
+        'Arial, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontWeight: 900,
+    };
+  }
+
+  if (resolved === "dynamic_highlight") {
+    return {
+      color: isActive ? "#FFE600" : "#FFFFFF",
+      scale: isActive ? 1.1 : 1.0,
+      textTransform: "uppercase",
+      textStroke: "3px #000000",
+      paintOrder: "stroke fill",
+      textShadow: isActive
+        ? "0 0 22px rgba(255, 230, 0, 0.85), 0 4px 10px rgba(0, 0, 0, 0.9)"
+        : "0 4px 12px rgba(0, 0, 0, 0.95), 0 2px 4px rgba(0, 0, 0, 0.8)",
+      fontFamily:
+        'Arial, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontWeight: 900,
+    };
+  }
+
+  // clean_cinematic (Default)
+  return {
+    color: isActive ? "#fcd34d" : "rgba(255, 255, 255, 0.85)",
+    scale: isActive ? 1.1 : 1.0,
+    textTransform: "none",
+    textShadow: isActive
+      ? "0 0 12px rgba(251, 191, 36, 0.85)"
+      : "0 2px 4px rgba(0, 0, 0, 0.85)",
+    fontWeight: isActive ? 900 : 700,
+  };
 }
 
 const TERMINAL_PUNCT = /[.!?]["'”’)]*$/;

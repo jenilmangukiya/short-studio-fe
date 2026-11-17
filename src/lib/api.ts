@@ -1,4 +1,4 @@
-import { getToken, removeToken } from "./auth";
+import { getToken, removeToken } from "./auth.ts";
 import type {
   User,
   UserCreate,
@@ -11,9 +11,10 @@ import type {
   VideoCreate,
   StepRevision,
   SubtitleData,
+  SubtitleStyleOut,
   ApiValidationError,
   ApiErrorResponse,
-} from "./types";
+} from "./types.ts";
 
 export class ApiError extends Error {
   status: number;
@@ -263,11 +264,19 @@ export const api = {
       });
     },
 
-    async rerunStep(id: string, stepName: string, prompt?: string): Promise<VideoDetail> {
+    async rerunStep(
+      id: string,
+      stepName: string,
+      prompt?: string,
+      subtitleStyle?: string | null
+    ): Promise<VideoDetail> {
       return request<VideoDetail>(`/api/videos/${id}/steps/${stepName}/rerun`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt || null }),
+        body: JSON.stringify({
+          prompt: prompt || null,
+          subtitle_style: subtitleStyle || null,
+        }),
       });
     },
 
@@ -389,6 +398,10 @@ export const api = {
       return request<SubtitleData>(`/api/videos/${videoId}/subtitles`, {
         cache: "no-store",
       });
+    },
+
+    async getSubtitleStyles(): Promise<SubtitleStyleOut[]> {
+      return request<SubtitleStyleOut[]>("/api/videos/subtitle-styles");
     },
   },
 };

@@ -41,6 +41,21 @@ export const PIPELINE_STEP_NAMES = [
 
 export type PipelineStepName = (typeof PIPELINE_STEP_NAMES)[number];
 
+export const DEFAULT_SUBTITLE_STYLE_ID = "clean_cinematic" as const;
+
+export type SubtitleStyleId =
+  | "clean_cinematic"
+  | "remotion_neon"
+  | "dynamic_highlight"
+  | (string & {});
+
+export interface SubtitleStyleOut {
+  id: string;
+  name: string;
+  description: string;
+  is_default: boolean;
+}
+
 export interface WordTimestamp {
   text: string;
   start: number;
@@ -64,6 +79,7 @@ export interface SubtitleSegment {
 
 export interface SubtitleData {
   segments: SubtitleSegment[];
+  style?: SubtitleStyleId | null;
   format?: string;
   total_words?: number;
   total_duration_seconds?: number;
@@ -78,6 +94,7 @@ export interface SubtitleData {
 }
 
 export interface SubtitleMeta {
+  style?: SubtitleStyleId | null;
   task?: string;
   provider?: string;
   model?: string;
@@ -96,6 +113,7 @@ export interface SubtitleMeta {
 
 export interface SubtitlesStepOutput {
   subtitles?: SubtitleData;
+  style?: SubtitleStyleId | null;
   subtitles_path?: string;
   vtt_path?: string;
   srt_path?: string;
