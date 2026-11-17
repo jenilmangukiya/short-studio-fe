@@ -4,7 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, formatErrorMessage } from "@/lib/api";
-import { getChannelVisualStyle } from "@/lib/types";
+import {
+  getChannelVisualStyle,
+  MAX_VISUAL_STYLE_LENGTH,
+  VISUAL_STYLE_WARNING_THRESHOLD,
+  validateVisualStyleLength,
+} from "@/lib/types";
 
 interface ChannelSettingsModalProps {
   channelId: string;
@@ -59,7 +64,7 @@ export function ChannelSettingsModal({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const currentValue = draft !== null ? draft : savedStyle;
-  const isDirty = draft !== null && draft.trim() !== savedStyle.trim();
+  const isDirty = draft !== null && (draft.trim() !== savedStyle.trim() || draft !== savedStyle);
   const isDefault = savedStyle.trim().length === 0;
   const isBusy = isSaving || isResetting;
 
@@ -95,6 +100,12 @@ export function ChannelSettingsModal({
     e.preventDefault();
     if (!isDirty || isBusy) return;
 
+    const validationError = validateVisualStyleLength(currentValue);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setError(null);
     setSuccessMessage(null);
     setIsSaving(true);
@@ -110,7 +121,7 @@ export function ChannelSettingsModal({
 
       const trimmed = currentValue.trim();
       if (trimmed.length > 0) {
-        freshSettings.visual_style = trimmed;
+        freshSettings.visual_style = currentValue;
       } else {
         delete freshSettings.visual_style;
       }
@@ -374,17 +385,21 @@ export function ChannelSettingsModal({
                     </label>
                     <span
                       className={`font-mono text-[11px] ${
-                        currentValue.length >= 580 ? "text-amber-600 font-bold" : "text-slate-400"
+                        currentValue.length > MAX_VISUAL_STYLE_LENGTH
+                          ? "text-red-600 font-bold"
+                          : currentValue.length >= VISUAL_STYLE_WARNING_THRESHOLD
+                          ? "text-amber-600 font-bold"
+                          : "text-slate-400"
                       }`}
                     >
-                      {currentValue.length} / 600 characters
+                      {currentValue.length} / 2,000 characters
                     </span>
                   </div>
 
                   <textarea
                     id={`visual-style-${channelId}`}
                     rows={5}
-                    maxLength={600}
+                    maxLength={MAX_VISUAL_STYLE_LENGTH}
                     value={currentValue}
                     onChange={(e) => {
                       setDraft(e.target.value);

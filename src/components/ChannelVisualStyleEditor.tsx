@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, formatErrorMessage } from "@/lib/api";
-import { getChannelVisualStyle } from "@/lib/types";
+import {
+  getChannelVisualStyle,
+  MAX_VISUAL_STYLE_LENGTH,
+  VISUAL_STYLE_WARNING_THRESHOLD,
+  validateVisualStyleLength,
+} from "@/lib/types";
 
 export { ChannelSettingsModal } from "./ChannelSettingsModal";
 
@@ -28,13 +33,19 @@ export function ChannelVisualStyleEditor({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const currentValue = draft !== null ? draft : savedStyle;
-  const isDirty = draft !== null && draft.trim() !== savedStyle.trim();
+  const isDirty = draft !== null && (draft.trim() !== savedStyle.trim() || draft !== savedStyle);
   const isDefault = savedStyle.trim().length === 0;
   const isBusy = isSaving || isResetting;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isDirty || isBusy) return;
+
+    const validationError = validateVisualStyleLength(currentValue);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
     setError(null);
     setSuccessMessage(null);
@@ -52,7 +63,7 @@ export function ChannelVisualStyleEditor({
 
       const trimmed = currentValue.trim();
       if (trimmed.length > 0) {
-        freshSettings.visual_style = trimmed;
+        freshSettings.visual_style = currentValue;
       } else {
         // If saved text is empty, remove the visual_style key instead of sending empty string
         delete freshSettings.visual_style;
@@ -190,17 +201,21 @@ export function ChannelVisualStyleEditor({
             </label>
             <span
               className={`font-mono text-[11px] ${
-                currentValue.length >= 580 ? "text-amber-600 font-bold" : "text-slate-400"
+                currentValue.length > MAX_VISUAL_STYLE_LENGTH
+                  ? "text-red-600 font-bold"
+                  : currentValue.length >= VISUAL_STYLE_WARNING_THRESHOLD
+                  ? "text-amber-600 font-bold"
+                  : "text-slate-400"
               }`}
             >
-              {currentValue.length} / 600 characters
+              {currentValue.length} / 2,000 characters
             </span>
           </div>
 
           <textarea
             id={`visual-style-${channelId}`}
             rows={4}
-            maxLength={600}
+            maxLength={MAX_VISUAL_STYLE_LENGTH}
             value={currentValue}
             onChange={(e) => {
               setDraft(e.target.value);

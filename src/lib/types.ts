@@ -489,6 +489,27 @@ export interface RenderStepOutput {
 
 
 /**
+ * Maximum character limit for channel visual style / style prompt / visual direction.
+ */
+export const MAX_VISUAL_STYLE_LENGTH = 2000;
+
+/**
+ * Warning threshold when the user is approaching the character limit (99% / 20 characters before limit).
+ */
+export const VISUAL_STYLE_WARNING_THRESHOLD = 1980;
+
+/**
+ * Validates style prompt / visual direction length.
+ * Returns null if valid, or an error message string if invalid (> 2,000 characters).
+ */
+export function validateVisualStyleLength(val: string | null | undefined): string | null {
+  if (val && val.length > MAX_VISUAL_STYLE_LENGTH) {
+    return `Style prompt / visual direction cannot exceed 2,000 characters (current: ${val.length.toLocaleString()}).`;
+  }
+  return null;
+}
+
+/**
  * Safely extracts the channel's custom visual_style string from its settings object.
  * Returns null if settings is missing, not an object, or visual_style is empty/whitespace.
  */
