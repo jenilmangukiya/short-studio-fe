@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    agentUpgrade: "security",
+  },
   async rewrites() {
     const apiUrl = process.env.API_URL || "http://localhost:8000";
     return [
