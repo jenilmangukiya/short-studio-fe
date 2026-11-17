@@ -5,6 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, formatErrorMessage } from "@/lib/api";
 import { getChannelVisualStyle } from "@/lib/types";
 
+export { ChannelSettingsModal } from "./ChannelSettingsModal";
+
 interface ChannelVisualStyleEditorProps {
   channelId: string;
   savedSettings: unknown;

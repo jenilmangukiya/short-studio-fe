@@ -4,7 +4,6 @@ import { use, useState, Suspense } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AuthGuard } from "@/components/AuthGuard";
-import { ChannelVisualStyleEditor } from "@/components/ChannelVisualStyleEditor";
 import { api, formatErrorMessage } from "@/lib/api";
 import type { VideoCreate, VideoStatus } from "@/lib/types";
 
@@ -148,24 +147,43 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setTopic("");
-              setDescription("");
-              setFormError(null);
-              setIsModalOpen(true);
-            }}
-            className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition shadow-xs cursor-pointer"
-          >
-            + Create New Video
-          </button>
-        </div>
-      )}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <Link
+              href={`/channels/${channelId}/settings`}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm transition shadow-xs cursor-pointer hover:border-slate-400"
+              title="Channel Settings"
+              aria-label="Channel Settings"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-4 h-4 text-slate-500"
+              >
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              <span>Settings</span>
+            </Link>
 
-      {/* Channel Visual Style Card */}
-      {channel && (
-        <ChannelVisualStyleEditor channelId={channelId} savedSettings={channel.settings} />
+            <button
+              type="button"
+              onClick={() => {
+                setTopic("");
+                setDescription("");
+                setFormError(null);
+                setIsModalOpen(true);
+              }}
+              className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition shadow-xs cursor-pointer"
+            >
+              + Create New Video
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Error state */}
