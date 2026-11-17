@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { VideoSummary } from "@/lib/types";
 import { formatRelativeTime, getVideoStatusConfig } from "@/lib/video-ui";
+import { VideoThumbnail } from "@/components/VideoThumbnail";
 
 interface VideoGridCardProps {
   video: VideoSummary;
@@ -15,31 +16,18 @@ export function VideoGridCard({ video, onDelete }: VideoGridCardProps) {
 
   return (
     <div className="group relative bg-white rounded-2xl border border-slate-200/90 hover:border-indigo-400 shadow-xs hover:shadow-lg transition-all duration-200 flex flex-col overflow-hidden">
-      {/* 9:16 Aspect Thumbnail Header with Cinematic Gradient */}
+      {/* 9:16 Aspect Thumbnail Header with Real AI Image or Default Fallback */}
       <Link href={`/videos/${video.id}`} className="block relative aspect-[16/10] bg-slate-900 overflow-hidden">
-        {/* Dynamic Studio Gradient based on Video ID/Status */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 opacity-95 group-hover:scale-105 transition-transform duration-500" />
-        
-        {/* Subtle grid pattern background */}
-        <div 
-          className="absolute inset-0 opacity-15"
-          style={{
-            backgroundImage: "radial-gradient(#818cf8 1px, transparent 1px)",
-            backgroundSize: "16px 16px",
-          }}
+        <VideoThumbnail
+          videoId={video.id}
+          topic={video.topic}
+          status={video.status}
+          variant="card"
         />
-
-        {/* 9:16 Vertical Phone Outline Silhouette in thumbnail */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-14 h-22 rounded-lg border border-indigo-400/30 bg-indigo-500/10 backdrop-blur-2xs flex flex-col items-center justify-center shadow-inner group-hover:border-indigo-400/60 group-hover:scale-110 transition-all duration-300">
-            <span className="text-xl opacity-80 group-hover:scale-110 transition-transform">🎬</span>
-            <span className="text-[9px] font-mono text-indigo-200/80 font-bold tracking-wider mt-1">9:16</span>
-          </div>
-        </div>
 
         {/* Top Badges */}
         <div className="absolute top-2.5 inset-x-2.5 flex items-center justify-between gap-2 z-10">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-black/40 text-slate-200 border border-white/10 backdrop-blur-md">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-black/50 text-slate-200 border border-white/15 backdrop-blur-md shadow-xs">
             Short
           </span>
 
@@ -57,7 +45,7 @@ export function VideoGridCard({ video, onDelete }: VideoGridCardProps) {
         </div>
 
         {/* Hover "Open Studio" Play Affordance */}
-        <div className="absolute inset-0 bg-indigo-950/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center backdrop-blur-3xs">
+        <div className="absolute inset-0 bg-indigo-950/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center backdrop-blur-3xs z-20">
           <span className="px-3 py-1.5 rounded-lg bg-white/95 text-indigo-700 text-xs font-semibold shadow-md flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 transition-transform">
             <span>Open Studio</span>
             <span className="text-sm leading-none">&rarr;</span>

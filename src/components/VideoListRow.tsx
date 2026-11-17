@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { VideoSummary } from "@/lib/types";
 import { formatRelativeTime, formatFullDateTime, getVideoStatusConfig } from "@/lib/video-ui";
+import { VideoThumbnail } from "@/components/VideoThumbnail";
 
 interface VideoListRowProps {
   video: VideoSummary;
@@ -19,14 +20,13 @@ export function VideoListRow({ video, onDelete }: VideoListRowProps) {
       {/* Left: Thumbnail & Topic Info */}
       <div className="flex items-center gap-3.5 min-w-0 flex-1">
         {/* Mini 9:16 Thumbnail */}
-        <Link
-          href={`/videos/${video.id}`}
-          className="relative w-12 h-16 rounded-lg bg-gradient-to-tr from-slate-950 via-slate-900 to-indigo-950 shrink-0 border border-slate-300 overflow-hidden flex items-center justify-center group-hover:scale-102 transition-transform shadow-2xs"
-        >
-          <span className="text-base">🎬</span>
-          <span className="absolute bottom-1 right-1 px-1 py-0.2 rounded-xs bg-black/60 text-[8px] font-mono text-white/90">
-            9:16
-          </span>
+        <Link href={`/videos/${video.id}`} className="shrink-0">
+          <VideoThumbnail
+            videoId={video.id}
+            topic={video.topic}
+            status={video.status}
+            variant="row"
+          />
         </Link>
 
         {/* Text Details */}

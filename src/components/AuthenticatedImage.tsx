@@ -62,6 +62,7 @@ interface UseAuthenticatedImageOptions {
   sceneIndex: number;
   promptHash?: string;
   enabled?: boolean;
+  retry?: number | boolean;
 }
 
 /**
@@ -77,6 +78,7 @@ export function useAuthenticatedImage({
   sceneIndex,
   promptHash,
   enabled = true,
+  retry,
 }: UseAuthenticatedImageOptions) {
   const query = useQuery({
     queryKey: ["scene-image", videoId, sceneIndex, promptHash],
@@ -84,7 +86,7 @@ export function useAuthenticatedImage({
     enabled: Boolean(videoId && sceneIndex !== undefined && enabled),
     staleTime: 1000 * 60 * 60, // 1 hour (same hash is immutable)
     gcTime: 1000 * 60 * 60 * 2, // 2 hours
-    retry: 1,
+    retry: retry ?? 1,
   });
 
   const blob = query.data;

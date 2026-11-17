@@ -9,7 +9,8 @@ import { StepStepper } from "@/components/StepStepper";
 import { StepDetailPanel } from "@/components/StepDetailPanel";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { api, formatErrorMessage } from "@/lib/api";
-import { PIPELINE_STEP_NAMES, type PipelineStepName, type VideoStatus } from "@/lib/types";
+import { PIPELINE_STEP_NAMES, type PipelineStepName } from "@/lib/types";
+import { getVideoStatusConfig, formatFullDateTime } from "@/lib/video-ui";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -39,27 +40,14 @@ function VideoDetailPageInner({ params }: PageProps) {
   );
 }
 
-function getStatusBadge(status: string) {
-  switch (status as VideoStatus) {
-    case "draft":
-      return "bg-slate-100 text-slate-700 border-slate-300";
-    case "in_progress":
-      return "bg-blue-50 text-blue-700 border-blue-300";
-    case "completed":
-      return "bg-emerald-50 text-emerald-700 border-emerald-300";
-    case "failed":
-      return "bg-red-50 text-red-700 border-red-300";
-    default:
-      return "bg-slate-100 text-slate-700 border-slate-300";
-  }
-}
 
 function VideoDetailContent({ videoId }: { videoId: string }) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const [actionError, setActionError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(true);
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   // URL step param initialization:
   // On load: valid ?step= means follow mode is OFF; missing or invalid means follow mode is ON.
@@ -319,66 +307,105 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
       {video && (
         <>
           {/* Header Card with Whole-Pipeline Controls */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${getStatusBadge(
-                      video.status
-                    )}`}
-                  >
-                    {video.status.replace("_", " ")}
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    Created {new Date(video.created_at).toLocaleString()}
-                  </span>
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+            <div className="p-5 sm:p-6">
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2.5 mb-2.5">
+                    {(() => {
+                      const cfg = getVideoStatusConfig(video.status);
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border ${cfg.badgeClass}`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${cfg.dotColor} ${
+                              cfg.isAnimated ? "animate-ping" : ""
+                            }`}
+                          />
+                          {video.status.replace("_", " ")}
+                        </span>
+                      );
+                    })()}
+                    <span className="text-xs text-slate-400">
+                      Created {formatFullDateTime(video.created_at)}
+                    </span>
+                  </div>
+
+                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-snug tracking-tight">
+                    {video.topic}
+                  </h1>
+
+                  {video.description && (
+                    <div className="mt-2.5 max-w-3xl">
+                      <p
+                        className={`text-xs sm:text-sm text-slate-600 leading-relaxed transition-all ${
+                          isDescriptionExpanded ? "whitespace-pre-line" : "line-clamp-2"
+                        }`}
+                      >
+                        {video.description}
+                      </p>
+                      {video.description.length > 120 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsDescriptionExpanded((prev) => !prev)}
+                          className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
+                        >
+                          <span>{isDescriptionExpanded ? "Show less ▴" : "Show full brief ▾"}</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <h1 className="text-2xl font-bold text-slate-900 leading-snug">{video.topic}</h1>
+                {/* Completed Video Actions in Header */}
+                {video.status === "completed" && (
+                  <div className="shrink-0 flex flex-wrap items-center gap-2 self-start pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsPreviewExpanded((prev) => !prev)}
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-semibold text-xs shadow-xs transition cursor-pointer ${
+                        isPreviewExpanded
+                          ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300/80"
+                          : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                      }`}
+                    >
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                        {isPreviewExpanded ? (
+                          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        ) : (
+                          <path d="M8 5v14l11-7z" />
+                        )}
+                      </svg>
+                      <span>{isPreviewExpanded ? "Hide Video Preview" : "Watch Video Preview"}</span>
+                    </button>
 
-                {video.description && (
-                  <p className="text-sm text-slate-600 mt-2 leading-relaxed">{video.description}</p>
+                    <button
+                      type="button"
+                      onClick={handleDownload}
+                      disabled={downloading}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs transition disabled:opacity-50 cursor-pointer"
+                    >
+                      <span>📥</span>
+                      <span>{downloading ? "Preparing..." : "Download MP4"}</span>
+                    </button>
+                  </div>
                 )}
               </div>
-
-              {/* Completed Video Actions */}
-              {video.status === "completed" && (
-                <div className="shrink-0 pt-2 md:pt-0 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsPreviewExpanded((prev) => !prev)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs shadow-2xs transition cursor-pointer"
-                  >
-                    <span>{isPreviewExpanded ? "▲ Hide Video Preview" : "▼ Watch Video Preview"}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleDownload}
-                    disabled={downloading}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-xs transition disabled:opacity-50 cursor-pointer"
-                  >
-                    <span>📥</span>
-                    <span>
-                      {downloading ? "Preparing MP4..." : "Download Captioned Video (MP4)"}
-                    </span>
-                  </button>
-                </div>
-              )}
             </div>
 
-            {/* Pipeline Action Controls */}
-            <div className="mt-6 pt-5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-              <div className="text-xs text-slate-500">
+            {/* Pipeline Action Controls Footer */}
+            <div className="bg-slate-50/70 px-5 py-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="text-slate-500 font-medium">
                 {isAnyRunning ? (
-                  <span className="inline-flex items-center gap-2 font-medium text-blue-600">
-                    <span className="h-2 w-2 rounded-full bg-blue-600 animate-ping" />
+                  <span className="inline-flex items-center gap-2 text-indigo-600 font-semibold">
+                    <span className="h-2 w-2 rounded-full bg-indigo-600 animate-ping" />
                     Pipeline step is actively executing... (live polling every 2s)
                   </span>
                 ) : allDone ? (
-                  <span className="text-emerald-600 font-semibold">
-                    ✓ All pipeline steps are completed!
+                  <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold">
+                    <span className="text-emerald-500 text-sm">✓</span>
+                    All 6 pipeline steps completed successfully
                   </span>
                 ) : hasStarted ? (
                   <span>
@@ -392,53 +419,55 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                {!hasStarted ? (
-                  <button
-                    type="button"
-                    onClick={() => startMutation.mutate()}
-                    disabled={isBusy}
-                    className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition shadow-xs disabled:opacity-50 cursor-pointer"
-                  >
-                    {startMutation.isPending ? "Starting..." : "Start Pipeline"}
-                  </button>
-                ) : (
-                  <>
+              {/* Action Buttons: Only shown if pipeline has active remaining steps */}
+              {!allDone && (
+                <div className="flex items-center gap-2">
+                  {!hasStarted ? (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (isNextStepAwaitingApproval && currentStep) {
-                          approveMutation.mutate({ stepName: currentStep.name, autoAdvance: true });
-                        } else {
-                          nextMutation.mutate();
-                        }
-                      }}
-                      disabled={isAnyRunning || allDone || isBusy}
-                      className={`px-4 py-2 rounded-lg font-semibold text-xs transition shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
-                        isNextStepFailed
-                          ? "bg-amber-600 hover:bg-amber-700 text-white"
-                          : "bg-indigo-600 hover:bg-indigo-700 text-white"
-                      }`}
+                      onClick={() => startMutation.mutate()}
+                      disabled={isBusy}
+                      className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition shadow-xs disabled:opacity-50 cursor-pointer"
                     >
-                      {nextMutation.isPending ? "Running..." : nextButtonLabel}
+                      {startMutation.isPending ? "Starting..." : "Start Pipeline"}
                     </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isNextStepAwaitingApproval && currentStep) {
+                            approveMutation.mutate({ stepName: currentStep.name, autoAdvance: true });
+                          } else {
+                            nextMutation.mutate();
+                          }
+                        }}
+                        disabled={isAnyRunning || allDone || isBusy}
+                        className={`px-3.5 py-1.5 rounded-lg font-semibold text-xs transition shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
+                          isNextStepFailed
+                            ? "bg-amber-600 hover:bg-amber-700 text-white"
+                            : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                        }`}
+                      >
+                        {nextMutation.isPending ? "Running..." : nextButtonLabel}
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => runAllMutation.mutate()}
-                      disabled={isAnyRunning || allDone || isBusy}
-                      className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs transition shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {runAllMutation.isPending ? "Running all..." : "Run All Steps"}
-                    </button>
-                  </>
-                )}
-              </div>
+                      <button
+                        type="button"
+                        onClick={() => runAllMutation.mutate()}
+                        disabled={isAnyRunning || allDone || isBusy}
+                        className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs transition shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        {runAllMutation.isPending ? "Running all..." : "Run All Steps"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Collapsible Video Preview Hero when Completed */}
+          {/* Collapsible Video Preview Hero when Completed & Expanded */}
           {video.status === "completed" && isPreviewExpanded && (
             <div className="rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/60 to-white p-6 shadow-xs flex flex-col items-center">
               <div className="w-full max-w-xl flex items-center justify-between pb-3 mb-5 border-b border-indigo-100">

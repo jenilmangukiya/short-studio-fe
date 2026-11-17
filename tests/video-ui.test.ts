@@ -187,3 +187,61 @@ test("8. filterAndSortVideos: sort options (newest, oldest, title) order results
     ["Alpha", "Bravo", "Charlie"]
   );
 });
+
+// ============================================================================
+// 5. VideoThumbnail Component Source Integrity Verification
+// ============================================================================
+
+test("9. VideoThumbnail component source integrity: loads Scene 1 image with fallback", async () => {
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+
+  const thumbnailSource = fs.readFileSync(path.resolve("src/components/VideoThumbnail.tsx"), "utf-8");
+
+  // 1. Uses useAuthenticatedImage hook
+  assert.match(thumbnailSource, /useAuthenticatedImage/);
+
+  // 2. Targets sceneIndex 1 (the first generated scene)
+  assert.match(thumbnailSource, /sceneIndex:\s*1/);
+
+  // 3. Fallback to default 9:16 silhouette when image not present
+  assert.match(thumbnailSource, /9:16/);
+  assert.match(thumbnailSource, /🎬/);
+});
+
+test("10. VideoGridCard and VideoListRow integrate VideoThumbnail component", async () => {
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+
+  const gridSource = fs.readFileSync(path.resolve("src/components/VideoGridCard.tsx"), "utf-8");
+  assert.match(gridSource, /<VideoThumbnail/);
+  assert.match(gridSource, /variant="card"/);
+
+  const rowSource = fs.readFileSync(path.resolve("src/components/VideoListRow.tsx"), "utf-8");
+  assert.match(rowSource, /<VideoThumbnail/);
+  assert.match(rowSource, /variant="row"/);
+});
+
+test("11. Video detail header: compact layout, clamped description, and manually toggleable preview", async () => {
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+
+  const pageSource = fs.readFileSync(path.resolve("src/app/videos/[id]/page.tsx"), "utf-8");
+  
+  // 1. isPreviewExpanded defaults to false (hidden by default)
+  assert.match(pageSource, /const \[isPreviewExpanded,\s*setIsPreviewExpanded\]\s*=\s*useState\(false\);/);
+
+  // 2. isDescriptionExpanded state allows clamping long prompts
+  assert.match(pageSource, /const \[isDescriptionExpanded,\s*setIsDescriptionExpanded\]\s*=\s*useState\(false\);/);
+  assert.match(pageSource, /line-clamp-2/);
+  assert.match(pageSource, /Show full brief/);
+
+  // 3. Header toggle button for Watch/Hide Video Preview
+  assert.match(pageSource, /setIsPreviewExpanded\(\(prev\)\s*=>\s*!prev\)/);
+  assert.match(pageSource, /Watch Video Preview/);
+
+  // 4. Hero section renders when expanded
+  assert.match(pageSource, /Full Short Video Ready/);
+});
+
+
