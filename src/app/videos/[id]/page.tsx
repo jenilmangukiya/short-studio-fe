@@ -11,6 +11,16 @@ import { VideoPlayer } from "@/components/VideoPlayer";
 import { api, formatErrorMessage } from "@/lib/api";
 import { PIPELINE_STEP_NAMES, type PipelineStepName } from "@/lib/types";
 import { getVideoStatusConfig, formatFullDateTime } from "@/lib/video-ui";
+import { useVisualStyles } from "@/lib/useVisualStyles";
+import {
+  getVideoEffectiveStyleId,
+  getVideoStyleDisplayName,
+  getVideoStyleDescription,
+  getStyleVisualMeta,
+  isLegacyVideo,
+} from "@/lib/visual-style-ui";
+import { StyleMotifIcon } from "@/components/VisualStyleSelector";
+import { ChangeVisualStyleModal } from "@/components/ChangeVisualStyleModal";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -48,6 +58,8 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
   const [downloading, setDownloading] = useState(false);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [isChangeStyleModalOpen, setIsChangeStyleModalOpen] = useState(false);
+  const [styleSuccessMessage, setStyleSuccessMessage] = useState<string | null>(null);
 
   // URL step param initialization:
   // On load: valid ?step= means follow mode is OFF; missing or invalid means follow mode is ON.
@@ -98,6 +110,10 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
     queryFn: () => api.channels.get(channelId!),
     enabled: Boolean(channelId),
   });
+
+  // Fetch visual style presets from catalog
+  const { data: catalogData } = useVisualStyles();
+  const catalogStyles = catalogData?.styles || [];
 
   const invalidateVideoQueries = () => {
     queryClient.invalidateQueries({ queryKey: ["video", videoId] });
@@ -201,6 +217,18 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
   // Check if any step in pipeline has failed
   const failedStep = sortedSteps.find((s) => s.status === "failed");
 
+  // Visual style metadata resolution
+  const effectiveStyleId = video ? getVideoEffectiveStyleId(video) : "legacy_default";
+  const isLegacy = video ? isLegacyVideo(video) : false;
+  const styleDisplayName = video
+    ? getVideoStyleDisplayName(video, catalogStyles)
+    : "Legacy Default — Clean 3D Studio";
+  const styleDescription = video
+    ? getVideoStyleDescription(video, catalogStyles)
+    : "";
+  const styleMeta = getStyleVisualMeta(effectiveStyleId);
+  const hasSnapshot = Boolean(video?.visual_style_snapshot);
+
   // Determine label for main pipeline button (Next step, Retry step, or Approve & Next)
   const isNextStepFailed = currentStep?.status === "failed";
   const isNextStepAwaitingApproval = currentStep?.status === "awaiting_approval";
@@ -296,6 +324,23 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
         </div>
       )}
 
+      {/* Style Update Success Notification */}
+      {styleSuccessMessage && (
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 flex items-center justify-between gap-2 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-600 font-bold">✓</span>
+            <span>{styleSuccessMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStyleSuccessMessage(null)}
+            className="text-emerald-500 hover:text-emerald-700 font-bold cursor-pointer"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* Loading Skeleton */}
       {isLoading && (
         <div className="space-y-4">
@@ -356,6 +401,68 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                       )}
                     </div>
                   )}
+
+                  {/* Visual Style Indicator & Change Action */}
+                  <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`w-8 h-8 rounded-lg bg-gradient-to-br ${styleMeta.gradientClass} border ${styleMeta.accentBorderClass} flex items-center justify-center shrink-0 shadow-2xs`}
+                      >
+                        <StyleMotifIcon iconName={styleMeta.iconName} className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                            Visual Style:
+                          </span>
+                          <span className="text-xs font-bold text-slate-900 truncate">
+                            {styleDisplayName}
+                          </span>
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold border ${styleMeta.badgeClass}`}
+                          >
+                            {styleMeta.badgeLabel}
+                          </span>
+                          {isLegacy && (
+                            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                              Legacy Default
+                            </span>
+                          )}
+                          {hasSnapshot && (
+                            <span
+                              className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200"
+                              title="Authoritative frozen style snapshot applied to this video"
+                            >
+                              v{video.visual_style_version || 1} frozen
+                            </span>
+                          )}
+                        </div>
+                        {styleDescription && (
+                          <p className="text-[11px] text-slate-500 truncate max-w-xl mt-0.5 hidden sm:block">
+                            {styleDescription}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStyleSuccessMessage(null);
+                        setIsChangeStyleModalOpen(true);
+                      }}
+                      disabled={isAnyRunning}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition shadow-2xs hover:border-slate-400 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      title={
+                        isAnyRunning
+                          ? "Cannot change visual style while a step is executing"
+                          : "Change visual style preset for this video"
+                      }
+                    >
+                      <span>🎨</span>
+                      <span>Change Style</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Completed Video Actions in Header */}
@@ -573,6 +680,20 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                 />
               )}
             </div>
+          )}
+          {/* Change Visual Style Modal */}
+          {video && isChangeStyleModalOpen && (
+            <ChangeVisualStyleModal
+              video={video}
+              isOpen={isChangeStyleModalOpen}
+              onClose={() => setIsChangeStyleModalOpen(false)}
+              onSuccess={(updatedVideo) => {
+                const newName = getVideoStyleDisplayName(updatedVideo, catalogStyles);
+                setStyleSuccessMessage(
+                  `Visual style updated to "${newName}". Storyboard scenes, renders, and subtitles have been invalidated and are ready for regeneration.`
+                );
+              }}
+            />
           )}
         </>
       )}

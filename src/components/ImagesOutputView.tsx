@@ -286,6 +286,19 @@ export function ImagesOutputView({
 
   return (
     <div className="space-y-4">
+      {/* Stale Warning Banner */}
+      {isStale && (
+        <div className="rounded-xl bg-amber-50 border border-amber-300 p-4 text-xs text-amber-900 flex items-start gap-3">
+          <span className="text-lg">⏳</span>
+          <div>
+            <p className="font-bold text-amber-950">Scene Images Outdated</p>
+            <p className="mt-0.5 text-amber-900">
+              Visual style was changed. These scene images will be regenerated when you advance the pipeline.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Warnings Box */}
       {warnings.length > 0 && (
         <div className="rounded-lg bg-amber-50 border border-amber-300 p-3.5 text-xs text-amber-900">
@@ -510,12 +523,12 @@ export function ImagesOutputView({
                 {/* Portrait Thumbnail Container with Click-to-Preview */}
                 <div
                   onClick={() => {
-                    if (item.status === "ok" && item.file) {
+                    if (!isStale && item.status === "ok" && item.file) {
                       setPreviewScene(item);
                     }
                   }}
                   className={`group/thumb relative aspect-[9/16] rounded-lg overflow-hidden border border-slate-200 shadow-2xs ${
-                    item.status === "ok" && item.file ? "cursor-pointer" : "cursor-default"
+                    !isStale && item.status === "ok" && item.file ? "cursor-pointer" : "cursor-default"
                   }`}
                 >
                   <AuthenticatedImage
@@ -524,6 +537,7 @@ export function ImagesOutputView({
                     promptHash={item.prompt_hash}
                     status={item.status}
                     hasFile={Boolean(item.file)}
+                    isStale={isStale}
                     alt={`Scene ${item.index} generated visual`}
                     aspectRatio="aspect-[9/16]"
                     imgClassName="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-200"
@@ -531,7 +545,7 @@ export function ImagesOutputView({
                   />
 
                   {/* Hover Overlay with Preview Icon */}
-                  {item.status === "ok" && item.file && (
+                  {!isStale && item.status === "ok" && item.file && (
                     <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
                       <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-900/90 text-white shadow-lg backdrop-blur-xs flex items-center gap-1">
                         <span>🔍</span> Preview
@@ -595,7 +609,7 @@ export function ImagesOutputView({
                   )}
                 </button>
 
-                {item.status === "ok" && item.file && (
+                {!isStale && item.status === "ok" && item.file && (
                   <button
                     type="button"
                     onClick={() => setPreviewScene(item)}
@@ -709,6 +723,7 @@ export function ImagesOutputView({
           isOpen={Boolean(previewScene)}
           onClose={() => setPreviewScene(null)}
           onSelectScene={(newItem) => setPreviewScene(newItem)}
+          isStale={isStale}
         />
       )}
     </div>

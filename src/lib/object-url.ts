@@ -47,12 +47,21 @@ class ObjectUrlRegistry {
     this.notify();
   }
 
-  getUrl(blob: Blob | undefined): string | null {
+  getUrl(blob: Blob | undefined | null): string | null {
     if (!blob) return null;
     return this.cache.get(blob)?.url ?? null;
   }
+
+  getEntryCount(): number {
+    return this.cache.size;
+  }
+
+  getRefCount(blob: Blob): number {
+    return this.cache.get(blob)?.refCount ?? 0;
+  }
 }
 
+export { ObjectUrlRegistry };
 export const objectUrlRegistry = new ObjectUrlRegistry();
 
 /**

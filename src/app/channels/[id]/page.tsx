@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AuthGuard } from "@/components/AuthGuard";
 import { api, formatErrorMessage } from "@/lib/api";
 import { getChannelVisualStyle } from "@/lib/types";
-import type { VideoCreate, VideoSummary } from "@/lib/types";
+import type { VideoCreate, VideoSummary, VisualStyleId } from "@/lib/types";
 import {
   computeVideoMetrics,
   filterAndSortVideos,
@@ -17,6 +17,7 @@ import { ChannelMetricsRibbon } from "@/components/ChannelMetricsRibbon";
 import { VideoToolbar } from "@/components/VideoToolbar";
 import { VideoGridCard } from "@/components/VideoGridCard";
 import { VideoListRow } from "@/components/VideoListRow";
+import { VisualStyleSelector } from "@/components/VisualStyleSelector";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -54,6 +55,7 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [topic, setTopic] = useState("");
   const [description, setDescription] = useState("");
+  const [selectedStyleId, setSelectedStyleId] = useState<VisualStyleId | null>(null);
 
   // Delete Video modal state
   const [videoToDelete, setVideoToDelete] = useState<VideoSummary | null>(null);
@@ -112,6 +114,7 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
       setIsModalOpen(false);
       setTopic("");
       setDescription("");
+      setSelectedStyleId(null);
       setFormError(null);
     },
     onError: (err) => {
@@ -147,6 +150,7 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
     createVideoMutation.mutate({
       topic: trimmedTopic,
       description: description.trim() || null,
+      ...(selectedStyleId ? { visual_style_id: selectedStyleId } : {}),
     });
   };
 
@@ -249,6 +253,7 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
                 onClick={() => {
                   setTopic("");
                   setDescription("");
+                  setSelectedStyleId(null);
                   setFormError(null);
                   setIsModalOpen(true);
                 }}
@@ -319,7 +324,13 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {
+                  setTopic("");
+                  setDescription("");
+                  setSelectedStyleId(null);
+                  setFormError(null);
+                  setIsModalOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition shadow-xs cursor-pointer"
               >
                 <span>+ Create Your First Short</span>
@@ -436,15 +447,19 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
       {/* Create Video Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-2xs">
-          <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <div className="w-full max-w-2xl max-h-[92vh] overflow-y-auto bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4 sticky top-0 bg-white z-10">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🎬</span>
                 <h3 className="text-base font-bold text-slate-900">Create New Short</h3>
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSelectedStyleId(null);
+                  setFormError(null);
+                }}
                 className="text-slate-400 hover:text-slate-600 text-lg cursor-pointer leading-none p-1"
               >
                 &times;
@@ -495,10 +510,24 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
                 />
               </div>
 
+              {/* Visual Style Selector */}
+              <div className="pt-1">
+                <VisualStyleSelector
+                  value={selectedStyleId}
+                  onChange={setSelectedStyleId}
+                  channelDefaultStyleId={channel?.default_visual_style_id}
+                  disabled={createVideoMutation.isPending}
+                />
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setSelectedStyleId(null);
+                    setFormError(null);
+                  }}
                   className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                 >
                   Cancel

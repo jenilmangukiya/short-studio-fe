@@ -12,6 +12,8 @@ import type {
   StepRevision,
   SubtitleData,
   SubtitleStyleOut,
+  VisualStyleId,
+  VisualStylesListOut,
   ApiValidationError,
   ApiErrorResponse,
 } from "./types.ts";
@@ -192,6 +194,14 @@ export const api = {
     },
   },
 
+  visualStyles: {
+    async list(): Promise<VisualStylesListOut> {
+      return request<VisualStylesListOut>("/api/visual-styles", {
+        skipAuth: true,
+      });
+    },
+  },
+
   videos: {
     async listByChannel(channelId: string): Promise<VideoSummary[]> {
       return request<VideoSummary[]>(`/api/channels/${channelId}/videos`);
@@ -202,6 +212,14 @@ export const api = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+      });
+    },
+
+    async updateVisualStyle(id: string, visualStyleId: VisualStyleId): Promise<VideoDetail> {
+      return request<VideoDetail>(`/api/videos/${id}/visual-style`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visual_style_id: visualStyleId }),
       });
     },
 
@@ -318,7 +336,7 @@ export const api = {
       return { blob, filename };
     },
 
-    async getSceneImageBlob(videoId: string, sceneIndex: number): Promise<Blob> {
+    async getSceneImageBlob(videoId: string, sceneIndex: number, signal?: AbortSignal): Promise<Blob> {
       const token = getToken();
       const headers = new Headers();
       if (token) {
@@ -328,6 +346,7 @@ export const api = {
       const response = await fetch(`/api/videos/${videoId}/images/${sceneIndex}`, {
         method: "GET",
         headers,
+        signal,
       });
 
       if (response.status === 401) {

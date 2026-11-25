@@ -13,6 +13,7 @@ interface ImagePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectScene?: (item: ImageItem) => void;
+  isStale?: boolean;
 }
 
 export function ImagePreviewModal({
@@ -24,6 +25,7 @@ export function ImagePreviewModal({
   isOpen,
   onClose,
   onSelectScene,
+  isStale = false,
 }: ImagePreviewModalProps) {
   const [copyPromptStatus, setCopyPromptStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [copyHashStatus, setCopyHashStatus] = useState<"idle" | "copied" | "failed">("idle");
@@ -76,7 +78,8 @@ export function ImagePreviewModal({
     videoId,
     sceneIndex: item.index,
     promptHash: item.prompt_hash,
-    enabled: isOpen && item.status === "ok" && Boolean(item.file),
+    enabled: isOpen && item.status === "ok" && Boolean(item.file) && !isStale,
+    isStale,
   });
 
   const handleDownload = () => {
@@ -152,6 +155,7 @@ export function ImagePreviewModal({
               promptHash={item.prompt_hash}
               status={item.status}
               hasFile={Boolean(item.file)}
+              isStale={isStale}
               alt={`Scene ${item.index} generated image`}
               aspectRatio="aspect-[9/16]"
               className="rounded-xl shadow-2xl border border-slate-800/80 w-full"

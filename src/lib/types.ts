@@ -1,16 +1,57 @@
 import type { components } from "./api-types";
 
+export type VisualStyleId =
+  | "legacy_default"
+  | "stickman_tactical_explainer"
+  | "stylized_2d_narrative";
+
+export const DEFAULT_VISUAL_STYLE_ID: VisualStyleId = "legacy_default";
+
+export interface VisualStyleSummaryOut {
+  id: VisualStyleId;
+  name: string;
+  version: number;
+  category: string;
+  description: string;
+  preview_image_path: string;
+  is_default: boolean;
+}
+
+export interface VisualStylesListOut {
+  default_style_id: VisualStyleId;
+  styles: VisualStyleSummaryOut[];
+}
+
+export interface VideoStyleUpdate {
+  visual_style_id: VisualStyleId;
+}
+
 export type User = components["schemas"]["UserOut"];
 export type UserCreate = components["schemas"]["UserCreate"];
 export type Token = components["schemas"]["Token"];
 
-export type Channel = components["schemas"]["ChannelOut"];
-export type ChannelCreate = components["schemas"]["ChannelCreate"];
-export type ChannelUpdate = components["schemas"]["ChannelUpdate"];
+export type Channel = components["schemas"]["ChannelOut"] & {
+  default_visual_style_id?: VisualStyleId | null;
+};
+export type ChannelCreate = components["schemas"]["ChannelCreate"] & {
+  default_visual_style_id?: VisualStyleId | null;
+};
+export type ChannelUpdate = components["schemas"]["ChannelUpdate"] & {
+  default_visual_style_id?: VisualStyleId | null;
+};
 
-export type VideoSummary = components["schemas"]["VideoSummary"];
-export type VideoDetail = components["schemas"]["VideoDetail"];
-export type VideoCreate = components["schemas"]["VideoCreate"];
+export type VideoSummary = components["schemas"]["VideoSummary"] & {
+  visual_style_id?: VisualStyleId | null;
+  visual_style_version?: number | null;
+};
+export type VideoDetail = components["schemas"]["VideoDetail"] & {
+  visual_style_id?: VisualStyleId | null;
+  visual_style_version?: number | null;
+  visual_style_snapshot?: Record<string, unknown> | null;
+};
+export type VideoCreate = components["schemas"]["VideoCreate"] & {
+  visual_style_id?: VisualStyleId | null;
+};
 
 export type StepOut = components["schemas"]["StepOut"] & {
   revisions_count?: number;

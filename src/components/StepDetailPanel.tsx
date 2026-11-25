@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   ImageItem,
   RenderData,
@@ -19,6 +19,7 @@ import { CollapsibleJson } from "./CollapsibleJson";
 import { RerunModal } from "./RerunModal";
 import { StepHistoryModal } from "./StepHistoryModal";
 import { evaluateRenderStaleness } from "@/lib/storyboard";
+import { imageInvalidationRegistry } from "@/lib/visual-style-ui";
 
 interface StepDetailPanelProps {
   step: StepOut;
@@ -74,6 +75,39 @@ export function StepDetailPanel({
   const isPending = step.status === "pending";
   const isAwaitingApproval = step.status === "awaiting_approval";
 
+  const isScript = step.name.toLowerCase() === "script";
+  const isStoryboard = step.name.toLowerCase() === "storyboard";
+  const isImages = step.name.toLowerCase() === "images";
+  const isVoiceover = step.name.toLowerCase() === "voiceover";
+  const isRender = step.name.toLowerCase() === "render";
+  const isSubtitles =
+    step.name.toLowerCase() === "subtitles" || step.name.toLowerCase() === "subtitle";
+  const isMock = Boolean(
+    step.output &&
+      typeof step.output === "object" &&
+      (step.output as Record<string, unknown>).mock === true
+  );
+
+  // Track previous status to ensure image invalidation is ONLY cleared on an active transition
+  // from "running" to "done" (i.e. completing an actual image regeneration run for this video).
+  // Mounting the component with an already "done" step must NEVER clear a pending invalidation.
+  const prevStatusRef = useRef(step.status);
+  const prevVideoIdRef = useRef(videoId);
+
+  useEffect(() => {
+    // If videoId switched, reset tracker so a different video's status doesn't trigger clearing
+    if (prevVideoIdRef.current !== videoId) {
+      prevVideoIdRef.current = videoId;
+      prevStatusRef.current = step.status;
+      return;
+    }
+
+    if (isImages && prevStatusRef.current === "running" && step.status === "done") {
+      imageInvalidationRegistry.clearVideoImageInvalidation(videoId);
+    }
+    prevStatusRef.current = step.status;
+  }, [isImages, step.status, videoId]);
+
   // Tick current time while step is running to compute live duration
   useEffect(() => {
     if (!isRunning || !step.started_at) return;
@@ -97,19 +131,6 @@ export function StepDetailPanel({
     if (mins === 0) return `${sec}s`;
     return `${mins}m ${remainingSec}s`;
   };
-
-  const isScript = step.name.toLowerCase() === "script";
-  const isStoryboard = step.name.toLowerCase() === "storyboard";
-  const isImages = step.name.toLowerCase() === "images";
-  const isVoiceover = step.name.toLowerCase() === "voiceover";
-  const isRender = step.name.toLowerCase() === "render";
-  const isSubtitles =
-    step.name.toLowerCase() === "subtitles" || step.name.toLowerCase() === "subtitle";
-  const isMock = Boolean(
-    step.output &&
-      typeof step.output === "object" &&
-      (step.output as Record<string, unknown>).mock === true
-  );
 
   // Extract storyboard scenes if available to enrich images view with narration & shot types
   const storyboardStep = allSteps.find((s) => s.name.toLowerCase() === "storyboard");
@@ -361,6 +382,7 @@ export function StepDetailPanel({
                       isStale={true}
                       videoId={videoId}
                       imageItems={imageItems}
+                      isImagesStale={imagesStep?.status === "stale"}
                       voiceoverItems={voiceoverItems}
                       renderData={renderData}
                       isRenderStale={isRenderStale}
@@ -444,6 +466,7 @@ export function StepDetailPanel({
                 isSaving={isUpdating}
                 videoId={videoId}
                 imageItems={imageItems}
+                isImagesStale={imagesStep?.status === "stale"}
                 voiceoverItems={voiceoverItems}
                 renderData={renderData}
                 isRenderStale={isRenderStale}
@@ -465,7 +488,7 @@ export function StepDetailPanel({
                 videoId={videoId}
                 output={step.output}
                 isMock={isMock}
-                isStale={false}
+                isStale={isStale}
                 isRunning={isRunning}
                 storyboardScenes={storyboardScenes}
               />

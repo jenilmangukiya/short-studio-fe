@@ -35,6 +35,7 @@ interface StoryboardOutputViewProps {
   isSaving?: boolean;
   videoId?: string;
   imageItems?: ImageItem[];
+  isImagesStale?: boolean;
   voiceoverItems?: VoiceoverItem[];
   renderData?: RenderData | null;
   isRenderStale?: boolean;
@@ -49,6 +50,7 @@ export function StoryboardOutputView({
   isSaving = false,
   videoId,
   imageItems,
+  isImagesStale = false,
   voiceoverItems,
   renderData,
   isRenderStale = false,
@@ -84,13 +86,13 @@ export function StoryboardOutputView({
   const scenes = useMemo(() => parsed?.scenes ?? [], [parsed]);
 
   const availableImageIndices = useMemo(() => {
-    if (!imageItems || imageItems.length === 0) return undefined;
+    if (!imageItems || imageItems.length === 0 || isImagesStale) return undefined;
     return new Set(
       imageItems
         .filter((it) => it.status === "ok" && Boolean(it.file))
         .map((it) => it.index)
     );
-  }, [imageItems]);
+  }, [imageItems, isImagesStale]);
 
   const beatImageSources = useMemo(() => {
     return resolveStoryboardBeatImages(scenes, { availableImageIndices });

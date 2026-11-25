@@ -3,66 +3,18 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { imageInvalidationRegistry } from "@/lib/visual-style-ui";
+import { objectUrlRegistry, ObjectUrlRegistry } from "@/lib/object-url";
 
-/**
- * Reference-counted registry for Object URLs created from Blobs.
- * Ensures that if multiple components (e.g. grid thumbnail + preview modal)
- * display the same image Blob, they share a single object URL.
- * When all components unmount, the URL is cleanly revoked.
- */
-class ObjectUrlRegistry {
-  private cache = new Map<Blob, { url: string; refCount: number }>();
-  private listeners = new Set<() => void>();
+export { objectUrlRegistry, ObjectUrlRegistry };
 
-  subscribe = (listener: () => void): (() => void) => {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
-  };
-
-  private notify() {
-    for (const listener of this.listeners) {
-      listener();
-    }
-  }
-
-  acquire(blob: Blob): string {
-    let entry = this.cache.get(blob);
-    if (!entry) {
-      entry = { url: URL.createObjectURL(blob), refCount: 0 };
-      this.cache.set(blob, entry);
-    }
-    entry.refCount++;
-    this.notify();
-    return entry.url;
-  }
-
-  release(blob: Blob) {
-    const entry = this.cache.get(blob);
-    if (!entry) return;
-    entry.refCount--;
-    if (entry.refCount <= 0) {
-      URL.revokeObjectURL(entry.url);
-      this.cache.delete(blob);
-    }
-    this.notify();
-  }
-
-  getUrl(blob: Blob | undefined): string | null {
-    if (!blob) return null;
-    return this.cache.get(blob)?.url ?? null;
-  }
-}
-
-const objectUrlRegistry = new ObjectUrlRegistry();
-
-interface UseAuthenticatedImageOptions {
+export interface UseAuthenticatedImageOptions {
   videoId: string;
   sceneIndex: number;
   promptHash?: string;
   enabled?: boolean;
   retry?: number | boolean;
+  isStale?: boolean;
 }
 
 /**
@@ -79,17 +31,32 @@ export function useAuthenticatedImage({
   promptHash,
   enabled = true,
   retry,
+  isStale = false,
 }: UseAuthenticatedImageOptions) {
+  // Subscribe reactively to global visual-style image invalidation for this video
+  const isRegistryStale = useSyncExternalStore(
+    imageInvalidationRegistry.subscribe,
+    () => (videoId ? imageInvalidationRegistry.isStale(videoId) : false),
+    () => false
+  );
+  const invalidationVersion = useSyncExternalStore(
+    imageInvalidationRegistry.subscribe,
+    () => (videoId ? imageInvalidationRegistry.getVersion(videoId) : 0),
+    () => 0
+  );
+
+  const effectiveIsStale = Boolean(isStale || isRegistryStale);
+
   const query = useQuery({
-    queryKey: ["scene-image", videoId, sceneIndex, promptHash],
-    queryFn: () => api.videos.getSceneImageBlob(videoId, sceneIndex),
-    enabled: Boolean(videoId && sceneIndex !== undefined && enabled),
+    queryKey: ["scene-image", videoId, sceneIndex, promptHash, invalidationVersion],
+    queryFn: ({ signal }) => api.videos.getSceneImageBlob(videoId, sceneIndex, signal),
+    enabled: Boolean(videoId && sceneIndex !== undefined && enabled && !effectiveIsStale),
     staleTime: 1000 * 60 * 60, // 1 hour (same hash is immutable)
     gcTime: 1000 * 60 * 60 * 2, // 2 hours
     retry: retry ?? 1,
   });
 
-  const blob = query.data;
+  const blob = effectiveIsStale ? undefined : query.data;
 
   // Manage reference-counted object URL via external registry
   useEffect(() => {
@@ -102,7 +69,7 @@ export function useAuthenticatedImage({
 
   const imageUrl = useSyncExternalStore(
     objectUrlRegistry.subscribe,
-    () => objectUrlRegistry.getUrl(blob),
+    () => (effectiveIsStale ? null : objectUrlRegistry.getUrl(blob)),
     () => null
   );
 
@@ -110,10 +77,11 @@ export function useAuthenticatedImage({
     ...query,
     imageUrl,
     blob,
+    isStale: effectiveIsStale,
   };
 }
 
-interface AuthenticatedImageProps {
+export interface AuthenticatedImageProps {
   videoId: string;
   sceneIndex: number;
   promptHash?: string;
@@ -125,6 +93,7 @@ interface AuthenticatedImageProps {
   aspectRatio?: string;
   onClick?: () => void;
   errorMessage?: string | null;
+  isStale?: boolean;
 }
 
 function DisplayImg({
@@ -171,24 +140,40 @@ export function AuthenticatedImage({
   aspectRatio = "aspect-[9/16]",
   onClick,
   errorMessage,
+  isStale = false,
 }: AuthenticatedImageProps) {
-  const isOk = status === "ok" && hasFile;
-  const isFailed = status === "failed";
+  const { imageUrl, isLoading, isError, error, refetch, isStale: effectiveIsStale } =
+    useAuthenticatedImage({
+      videoId,
+      sceneIndex,
+      promptHash,
+      enabled: status === "ok" && hasFile && !isStale,
+      isStale,
+    });
 
-  const { imageUrl, isLoading, isError, error, refetch } = useAuthenticatedImage({
-    videoId,
-    sceneIndex,
-    promptHash,
-    enabled: isOk,
-  });
+  const isOk = status === "ok" && hasFile && !effectiveIsStale;
+  const isFailed = status === "failed" && !effectiveIsStale;
 
   return (
     <div
       className={`relative overflow-hidden bg-slate-900 flex items-center justify-center select-none ${aspectRatio} ${className}`}
-      onClick={imageUrl ? onClick : undefined}
+      onClick={!effectiveIsStale && imageUrl ? onClick : undefined}
     >
-      {/* 1. Failed State from Generation */}
-      {isFailed && (
+      {/* 1. Stale / Style Changed State */}
+      {effectiveIsStale && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-slate-900 border border-amber-500/30 text-amber-200 select-none">
+          <span className="text-2xl mb-1.5 opacity-80">🎨</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+            Style Changed
+          </span>
+          <p className="text-[10px] text-amber-200/80 mt-1 max-w-[130px] leading-tight">
+            Image outdated. Ready for regeneration.
+          </p>
+        </div>
+      )}
+
+      {/* 2. Failed State from Generation */}
+      {!effectiveIsStale && isFailed && (
         <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-red-950/70 border border-red-800/80 text-red-200">
           <span className="text-xl mb-1.5">⚠️</span>
           <span className="text-[11px] font-bold uppercase tracking-wider text-red-300">
@@ -200,8 +185,8 @@ export function AuthenticatedImage({
         </div>
       )}
 
-      {/* 2. Missing or Not Generated yet */}
-      {!isFailed && !isOk && (
+      {/* 3. Missing or Not Generated yet */}
+      {!effectiveIsStale && !isFailed && !isOk && (
         <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-slate-800 text-slate-400">
           <span className="text-2xl mb-1 opacity-50">🖼️</span>
           <span className="text-[11px] font-medium text-slate-300">Image not ready</span>
@@ -209,16 +194,16 @@ export function AuthenticatedImage({
         </div>
       )}
 
-      {/* 3. Loading / Fetching State */}
-      {isOk && isLoading && (
+      {/* 4. Loading / Fetching State */}
+      {!effectiveIsStale && isOk && isLoading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 text-slate-400 animate-pulse">
           <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent mb-2" />
           <span className="text-[11px] font-medium text-slate-300">Loading scene {sceneIndex}...</span>
         </div>
       )}
 
-      {/* 4. Network Fetch Error */}
-      {isOk && !isLoading && isError && (
+      {/* 5. Network Fetch Error */}
+      {!effectiveIsStale && isOk && !isLoading && isError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-slate-900 border border-red-900/40 text-red-300">
           <span className="text-xl mb-1">✕</span>
           <span className="text-[11px] font-semibold">Failed to load</span>
@@ -238,8 +223,8 @@ export function AuthenticatedImage({
         </div>
       )}
 
-      {/* 5. Successfully loaded image */}
-      {isOk && imageUrl && (
+      {/* 6. Successfully loaded image */}
+      {!effectiveIsStale && isOk && imageUrl && (
         <DisplayImg
           key={imageUrl}
           src={imageUrl}
