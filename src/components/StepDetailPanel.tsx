@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type {
   ImageItem,
   RenderData,
@@ -68,6 +68,13 @@ export function StepDetailPanel({
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
+  // Subscribe reactively to global visual-style image invalidation for this video
+  const isRegistryStale = useSyncExternalStore(
+    imageInvalidationRegistry.subscribe,
+    () => (videoId ? imageInvalidationRegistry.isStale(videoId) : false),
+    () => false
+  );
+
   const isRunning = step.status === "running";
   const isStale = step.status === "stale";
   const isFailed = step.status === "failed";
@@ -87,6 +94,17 @@ export function StepDetailPanel({
       typeof step.output === "object" &&
       (step.output as Record<string, unknown>).mock === true
   );
+
+  // Extract images step and evaluate image readiness
+  const imagesStep = allSteps.find((s) => s.name.toLowerCase() === "images");
+  // Images are ready ONLY if imagesStep exists, has status "done", and is NOT in-memory invalidated
+  const isImagesReady = Boolean(
+    imagesStep &&
+    imagesStep.status === "done" &&
+    !isRegistryStale
+  );
+  const isDownstreamVisualStep = isRender || isSubtitles;
+  const isBlockedByImages = isDownstreamVisualStep && !isImagesReady;
 
   // Track previous status to ensure image invalidation is ONLY cleared on an active transition
   // from "running" to "done" (i.e. completing an actual image regeneration run for this video).
@@ -141,7 +159,6 @@ export function StepDetailPanel({
     : undefined;
 
   // Extract images step output if available to enrich storyboard beat thumbnails
-  const imagesStep = allSteps.find((s) => s.name.toLowerCase() === "images");
   const rawImagesOutput = imagesStep?.output as Record<string, unknown> | undefined;
   const imageItems: ImageItem[] | undefined = (() => {
     if (!rawImagesOutput || typeof rawImagesOutput !== "object") return undefined;
@@ -256,7 +273,12 @@ export function StepDetailPanel({
           <button
             type="button"
             onClick={() => setIsRerunOpen(true)}
-            disabled={isAnyRunning || isPending}
+            disabled={isAnyRunning || isPending || isBlockedByImages}
+            title={
+              isBlockedByImages
+                ? `Cannot rerun ${step.name}: Scene images must be generated first.`
+                : undefined
+            }
             className="px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 shadow-2xs transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             Rerun Step...
@@ -266,6 +288,26 @@ export function StepDetailPanel({
 
       {/* Panel Body */}
       <div className="p-5 sm:p-6 space-y-5">
+        {/* Images Not Ready Alert Banner for Render & Subtitles */}
+        {isBlockedByImages && (
+          <div className="rounded-xl bg-amber-50 border border-amber-300 p-4 text-xs text-amber-950 flex items-start gap-3 shadow-2xs">
+            <span className="text-base text-amber-600 font-bold shrink-0">⚠️</span>
+            <div>
+              <p className="font-bold text-amber-950">
+                Scene Images Not Ready — Rerun Blocked
+              </p>
+              <p className="mt-0.5 text-amber-900 leading-relaxed">
+                {imagesStep?.status === "stale" || isRegistryStale
+                  ? `Scene images for this video are outdated or invalidated. You must regenerate the Images step before rerunning ${step.name}.`
+                  : imagesStep?.status === "running"
+                  ? `Scene images are currently generating. Please wait for the Images step to finish before rerunning ${step.name}.`
+                  : imagesStep?.status === "failed"
+                  ? `Scene image generation failed. Please fix or rerun the Images step before rerunning ${step.name}.`
+                  : `Scene images have not been generated yet. Please complete the Images step before rerunning ${step.name}.`}
+              </p>
+            </div>
+          </div>
+        )}
         {/* Awaiting Approval Gatekeeping Banner */}
         {isAwaitingApproval && (
           <div className="rounded-xl bg-purple-50 border border-purple-200 p-4 text-xs text-purple-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs">
@@ -426,6 +468,7 @@ export function StepDetailPanel({
                       output={step.output}
                       isMock={isMock}
                       isStale={true}
+                      isImagesReady={isImagesReady}
                       isRunning={isRunning}
                       stepStatus={step.status}
                     />
@@ -522,6 +565,7 @@ export function StepDetailPanel({
                 output={step.output}
                 isMock={isMock}
                 isStale={false}
+                isImagesReady={isImagesReady}
                 isRunning={isRunning}
                 stepStatus={step.status}
               />
@@ -575,6 +619,7 @@ export function StepDetailPanel({
               output={{ subtitles: { segments: [] } }}
               isMock={isMock}
               isStale={false}
+              isImagesReady={isImagesReady}
               isRunning={true}
               stepStatus={step.status}
             />
@@ -595,6 +640,7 @@ export function StepDetailPanel({
         isOpen={isRerunOpen}
         onClose={() => setIsRerunOpen(false)}
         onConfirm={async (prompt) => {
+          if (isBlockedByImages) return;
           await onRerun(step.name, prompt);
         }}
       />
@@ -608,6 +654,7 @@ export function StepDetailPanel({
         onRollback={async (stepName, ver) => {
           await onRollback?.(stepName, ver);
         }}
+        isImagesReady={isImagesReady}
       />
     </div>
   );

@@ -117,21 +117,21 @@ test("7. getStyleVisualMeta provides graceful fallback for unknown styles", () =
 // 3. Creation Payload Generation Tests
 // ============================================================================
 
-test("8. VideoCreate payload omits visual_style_id when selection is null (preserving inheritance)", () => {
+test("8. Video creation requires mandatory visual_style_id selection", () => {
   const topic = "How Quantum Computing Works";
   const description = "Explain superposition and entanglement";
-  const selectedStyleId: VisualStyleId | null = null;
+  const selectedStyleId: VisualStyleId = "stylized_2d_narrative";
 
   const payload: VideoCreate = {
     topic,
     description,
-    ...(selectedStyleId ? { visual_style_id: selectedStyleId } : {}),
+    visual_style_id: selectedStyleId,
   };
 
   assert.equal(payload.topic, topic);
   assert.equal(payload.description, description);
-  assert.equal("visual_style_id" in payload, false);
-  assert.equal(payload.visual_style_id, undefined);
+  assert.equal("visual_style_id" in payload, true);
+  assert.equal(payload.visual_style_id, "stylized_2d_narrative");
 });
 
 test("9. VideoCreate payload includes visual_style_id when user makes an explicit selection", () => {
@@ -142,7 +142,7 @@ test("9. VideoCreate payload includes visual_style_id when user makes an explici
   const payload: VideoCreate = {
     topic,
     description,
-    ...(selectedStyleId ? { visual_style_id: selectedStyleId } : {}),
+    visual_style_id: selectedStyleId,
   };
 
   assert.equal(payload.topic, topic);
@@ -157,7 +157,7 @@ test("10. VideoCreate payload includes visual_style_id if legacy_default is expl
 
   const payload: VideoCreate = {
     topic,
-    ...(selectedStyleId ? { visual_style_id: selectedStyleId } : {}),
+    visual_style_id: selectedStyleId,
   };
 
   assert.equal(payload.visual_style_id, "legacy_default");
@@ -231,11 +231,25 @@ test("12. ChannelDetailPage integrates VisualStyleSelector in creation flow", ()
     "Must maintain selectedStyleId state defaulting to null"
   );
 
-  // Passes channelDefaultStyleId to selector
+  // Enforces explicit selection and disallows deselection
   assert.match(
     content,
-    /channelDefaultStyleId=\{channel\?\.default_visual_style_id\}/,
-    "Must pass channel?.default_visual_style_id to selector"
+    /allowDeselect=\{false\}/,
+    "Must set allowDeselect={false} on VisualStyleSelector"
+  );
+
+  // Guards submission when style is not selected
+  assert.match(
+    content,
+    /if\s*\(!selectedStyleId\)/,
+    "Must guard submission when selectedStyleId is null"
+  );
+
+  // Disables submit button until style is selected
+  assert.match(
+    content,
+    /disabled=\{[^}]*!selectedStyleId[^}]*\}/,
+    "Must disable submit button when no style is selected"
   );
 
   // Resets state on successful creation and modal close

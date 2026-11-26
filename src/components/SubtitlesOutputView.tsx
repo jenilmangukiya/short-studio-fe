@@ -15,6 +15,7 @@ interface SubtitlesOutputViewProps {
   output: unknown;
   isMock?: boolean;
   isStale?: boolean;
+  isImagesReady?: boolean;
   isRunning?: boolean;
   stepStatus?: StepStatus | string;
   previewStyleId?: SubtitleStyleId | null;
@@ -153,6 +154,7 @@ export function SubtitlesOutputView({
   output,
   isMock,
   isStale = false,
+  isImagesReady = true,
   isRunning = false,
   stepStatus,
   previewStyleId: propPreviewStyleId,
@@ -198,7 +200,7 @@ export function SubtitlesOutputView({
   const isRerunInProgress = isApplying || isRunning;
 
   const handleApplyStyle = async (styleId: SubtitleStyleId) => {
-    if (isRerunInProgress || styleId === appliedStyleId) return;
+    if (isRerunInProgress || styleId === appliedStyleId || isImagesReady === false) return;
     setIsApplying(true);
     setRegenError(null);
     try {
@@ -486,6 +488,19 @@ export function SubtitlesOutputView({
           </div>
         )}
 
+        {/* Images Not Ready Warning Banner */}
+        {isImagesReady === false && (
+          <div className="rounded-xl bg-amber-50 border border-amber-300 p-4 text-xs text-amber-950 flex items-start gap-3 shadow-2xs">
+            <span className="text-base text-amber-600 font-bold shrink-0">⚠️</span>
+            <div>
+              <p className="font-bold text-amber-950">Scene Images Not Ready — Subtitle Style Re-rendering Blocked</p>
+              <p className="mt-0.5 text-amber-900 leading-relaxed">
+                Scene images for this video must be generated before applying subtitle styles to the final video. You can still preview styles in the overlay player above.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Styles Grid */}
         {!isStylesLoading && !isStylesError && stylesData && stylesData.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3" data-testid="styles-grid">
@@ -575,8 +590,13 @@ export function SubtitlesOutputView({
               <button
                 type="button"
                 onClick={() => handleApplyStyle(effectivePreviewStyle)}
-                disabled={isRerunInProgress || !previewDiffersFromApplied}
-                className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                disabled={isRerunInProgress || !previewDiffersFromApplied || isImagesReady === false}
+                title={
+                  isImagesReady === false
+                    ? "Cannot apply subtitle style while scene images are not ready. Please regenerate images first."
+                    : undefined
+                }
+                className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
                 data-testid="apply-style-button"
               >
                 {isRerunInProgress ? (

@@ -162,13 +162,14 @@ test("4. api.videos.create sends visual_style_id when provided", async () => {
   }
 });
 
-test("5. api.videos.create without visual_style_id remains fully supported", async () => {
+test("5. api.videos.create requires visual_style_id in request payload", async () => {
   const originalFetch = globalThis.fetch;
   const requests: { url: string; method: string; body: unknown }[] = [];
 
   const channelId = "c1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c";
   const newVideo: VideoCreate = {
     topic: "Ancient Roman Aqueducts",
+    visual_style_id: "legacy_default",
   };
 
   const mockResponse: VideoSummary = {
@@ -203,6 +204,7 @@ test("5. api.videos.create without visual_style_id remains fully supported", asy
     assert.equal(requests[0].method, "POST");
     assert.deepEqual(requests[0].body, {
       topic: "Ancient Roman Aqueducts",
+      visual_style_id: "legacy_default",
     });
 
     assert.equal(result.topic, "Ancient Roman Aqueducts");

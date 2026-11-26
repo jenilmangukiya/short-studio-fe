@@ -10,6 +10,7 @@ interface StepHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRollback: (stepName: string, version: number) => Promise<void>;
+  isImagesReady?: boolean;
 }
 
 export function StepHistoryModal({
@@ -18,11 +19,18 @@ export function StepHistoryModal({
   isOpen,
   onClose,
   onRollback,
+  isImagesReady,
 }: StepHistoryModalProps) {
   const [revisions, setRevisions] = useState<StepRevision[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rollingBackVer, setRollingBackVer] = useState<number | null>(null);
+
+  const isDownstreamVisualStep =
+    stepName.toLowerCase() === "render" ||
+    stepName.toLowerCase() === "subtitles" ||
+    stepName.toLowerCase() === "subtitle";
+  const isRollbackBlocked = isDownstreamVisualStep && isImagesReady === false;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -57,6 +65,11 @@ export function StepHistoryModal({
   if (!isOpen) return null;
 
   const handleRollback = async (version: number) => {
+    if (isRollbackBlocked) {
+      setError(`Cannot rollback ${stepName} revisions while scene images are not ready.`);
+      return;
+    }
+
     const confirmed = window.confirm(
       `Rollback step "${stepName}" to version ${version}? Downstream steps will become stale and will need to be re-run.`
     );
@@ -99,6 +112,18 @@ export function StepHistoryModal({
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-700">
             {error}
+          </div>
+        )}
+
+        {isRollbackBlocked && (
+          <div className="mb-4 rounded-lg bg-amber-50 border border-amber-300 p-3 text-xs text-amber-950 flex items-start gap-2">
+            <span className="text-amber-600 font-bold shrink-0">⚠️</span>
+            <div>
+              <p className="font-bold">Rollback Blocked</p>
+              <p className="mt-0.5 text-amber-900 leading-relaxed">
+                Cannot rollback {stepName} revisions while scene images are not ready. Please regenerate images first.
+              </p>
+            </div>
           </div>
         )}
 
@@ -150,9 +175,14 @@ export function StepHistoryModal({
                       {!isLatest && (
                         <button
                           type="button"
-                          disabled={rollingBackVer !== null}
+                          disabled={rollingBackVer !== null || isRollbackBlocked}
+                          title={
+                            isRollbackBlocked
+                              ? "Cannot rollback revision: Scene images must be generated first."
+                              : undefined
+                          }
                           onClick={() => handleRollback(rev.version)}
-                          className="px-2.5 py-1 text-xs font-semibold rounded-md border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition cursor-pointer shadow-2xs disabled:opacity-50"
+                          className="px-2.5 py-1 text-xs font-semibold rounded-md border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {rollingBackVer === rev.version ? "Restoring..." : "Rollback to this"}
                         </button>

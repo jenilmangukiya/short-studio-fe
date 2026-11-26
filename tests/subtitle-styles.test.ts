@@ -416,10 +416,15 @@ test("14. Applied and previewed styles distinction & local preview state update"
 test("15. Apply button enablement logic based on preview difference and running state", () => {
   const appliedStyleId = "clean_cinematic";
 
-  const isApplyEnabled = (previewStyleId: string, isApplying: boolean, isRunning: boolean) => {
+  const isApplyEnabled = (
+    previewStyleId: string,
+    isApplying: boolean,
+    isRunning: boolean,
+    isImagesReady: boolean = true
+  ) => {
     const isRerunInProgress = isApplying || isRunning;
     const previewDiffers = previewStyleId !== appliedStyleId;
-    return previewDiffers && !isRerunInProgress;
+    return previewDiffers && !isRerunInProgress && isImagesReady;
   };
 
   // Preview matches applied -> disabled
@@ -437,6 +442,9 @@ test("15. Apply button enablement logic based on preview difference and running 
 
   // Preview differs, but both applying and running -> disabled
   assert.equal(isApplyEnabled("remotion_neon", true, true), false);
+
+  // Preview differs, idle, but images are not ready -> disabled
+  assert.equal(isApplyEnabled("remotion_neon", false, false, false), false);
 });
 
 test("16. Apply & Regenerate Subtitles sends correct subtitle_style payload and enqueues worker", async () => {

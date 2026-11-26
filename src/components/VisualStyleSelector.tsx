@@ -234,7 +234,7 @@ export function VisualStyleSelector({
           )}
         </div>
 
-        {!hideResetButton && selectionSummary.isOverridden && (
+        {!hideResetButton && Boolean(channelDefaultStyleId) && selectionSummary.isOverridden && (
           <button
             type="button"
             onClick={() => onChange(null)}
@@ -254,22 +254,32 @@ export function VisualStyleSelector({
           className={`px-3 py-1.5 rounded-lg text-[11px] border flex items-center justify-between gap-2 transition-colors ${
             selectionSummary.isOverridden
               ? "bg-indigo-50/80 border-indigo-200/90 text-indigo-900"
-              : "bg-slate-50 border-slate-200 text-slate-600"
+              : Boolean(channelDefaultStyleId)
+              ? "bg-slate-50 border-slate-200 text-slate-600"
+              : "bg-amber-50/70 border-amber-200/80 text-amber-900"
           }`}
         >
           <div className="flex items-center gap-1.5 truncate">
-            <span>{selectionSummary.isOverridden ? "✨" : "ℹ️"}</span>
-            <span className="truncate">{selectionSummary.summaryText}</span>
+            <span>{selectionSummary.isOverridden ? "✨" : Boolean(channelDefaultStyleId) ? "ℹ️" : "⚠️"}</span>
+            <span className="truncate">
+              {selectionSummary.isOverridden
+                ? selectionSummary.summaryText
+                : Boolean(channelDefaultStyleId)
+                ? selectionSummary.summaryText
+                : "No visual style selected. Please select a style below."}
+            </span>
           </div>
 
           <span
             className={`shrink-0 px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider ${
               selectionSummary.isOverridden
                 ? "bg-indigo-600 text-white"
-                : "bg-slate-200 text-slate-700"
+                : Boolean(channelDefaultStyleId)
+                ? "bg-slate-200 text-slate-700"
+                : "bg-amber-200 text-amber-900"
             }`}
           >
-            {selectionSummary.isOverridden ? "Override" : "Inherited"}
+            {selectionSummary.isOverridden ? "Selected" : Boolean(channelDefaultStyleId) ? "Inherited" : "Required"}
           </span>
         </div>
       )}
@@ -283,10 +293,10 @@ export function VisualStyleSelector({
         {styles.map((style: VisualStyleSummaryOut) => {
           const isExplicitlySelected = value === style.id;
           const isInheritedDefault =
-            value === null && effectiveStyleId === style.id;
-          const isChannelDefault = channelDefaultStyleId === style.id;
+            Boolean(channelDefaultStyleId) && value === null && effectiveStyleId === style.id;
+          const isChannelDefault = Boolean(channelDefaultStyleId) && channelDefaultStyleId === style.id;
           const isSystemDefault =
-            !channelDefaultStyleId && style.id === DEFAULT_VISUAL_STYLE_ID;
+            allowDeselect && !channelDefaultStyleId && style.id === DEFAULT_VISUAL_STYLE_ID;
 
           const meta = getStyleVisualMeta(style.id);
 
@@ -411,7 +421,9 @@ export function VisualStyleSelector({
               <div className="pt-2 mt-2 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
                 <span>
                   {isExplicitlySelected
-                    ? "Click to unselect"
+                    ? allowDeselect
+                      ? "Click to unselect"
+                      : "Selected"
                     : isInheritedDefault
                     ? "Active by default"
                     : "Click to select"}

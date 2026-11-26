@@ -146,11 +146,15 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
       setFormError("Topic cannot exceed 300 characters.");
       return;
     }
+    if (!selectedStyleId) {
+      setFormError("Please select a visual style for this short.");
+      return;
+    }
 
     createVideoMutation.mutate({
       topic: trimmedTopic,
       description: description.trim() || null,
-      ...(selectedStyleId ? { visual_style_id: selectedStyleId } : {}),
+      visual_style_id: selectedStyleId,
     });
   };
 
@@ -514,8 +518,13 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
               <div className="pt-1">
                 <VisualStyleSelector
                   value={selectedStyleId}
-                  onChange={setSelectedStyleId}
-                  channelDefaultStyleId={channel?.default_visual_style_id}
+                  onChange={(styleId) => {
+                    setSelectedStyleId(styleId);
+                    if (formError === "Please select a visual style for this short.") {
+                      setFormError(null);
+                    }
+                  }}
+                  allowDeselect={false}
                   disabled={createVideoMutation.isPending}
                 />
               </div>
@@ -534,7 +543,7 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={createVideoMutation.isPending}
+                  disabled={createVideoMutation.isPending || !selectedStyleId}
                   className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   {createVideoMutation.isPending ? "Creating..." : "Create Short"}

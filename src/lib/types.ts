@@ -49,8 +49,8 @@ export type VideoDetail = components["schemas"]["VideoDetail"] & {
   visual_style_version?: number | null;
   visual_style_snapshot?: Record<string, unknown> | null;
 };
-export type VideoCreate = components["schemas"]["VideoCreate"] & {
-  visual_style_id?: VisualStyleId | null;
+export type VideoCreate = Omit<components["schemas"]["VideoCreate"], "visual_style_id"> & {
+  visual_style_id: VisualStyleId;
 };
 
 export type StepOut = components["schemas"]["StepOut"] & {
