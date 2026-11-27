@@ -7,7 +7,7 @@ import type {
   StoryboardScene,
   VoiceoverItem,
 } from "@/lib/types";
-import { getVisualIntentLabel } from "@/lib/types";
+import { getVisualIntentLabel, getVisualTechniqueLabel } from "@/lib/types";
 import {
   correlateBeatsWithTelemetry,
   hasVisualBeats,
@@ -395,6 +395,14 @@ export function StoryboardOutputView({
                       title={`Visual Intent: ${getVisualIntentLabel(scene.visual_intent)}`}
                     >
                       {getVisualIntentLabel(scene.visual_intent)}
+                    </span>
+                  )}
+                  {scene.visual_technique && (
+                    <span
+                      className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200"
+                      title={`Visual Technique: ${getVisualTechniqueLabel(scene.visual_technique)}`}
+                    >
+                      {getVisualTechniqueLabel(scene.visual_technique)}
                     </span>
                   )}
                   {scene.environment && (

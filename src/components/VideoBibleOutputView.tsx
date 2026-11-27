@@ -8,12 +8,14 @@ interface VideoBibleOutputViewProps {
   output: unknown;
   isMock?: boolean;
   isStale?: boolean;
+  visualStyleSnapshot?: Record<string, unknown> | null;
 }
 
 export function VideoBibleOutputView({
   output,
   isMock = false,
   isStale = false,
+  visualStyleSnapshot,
 }: VideoBibleOutputViewProps) {
   const [showRaw, setShowRaw] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -30,6 +32,19 @@ export function VideoBibleOutputView({
   const vb = (typedOutput.video_bible || typedOutput) as VideoBibleOutput;
   const warnings = Array.isArray(typedOutput.warnings) ? (typedOutput.warnings as string[]) : [];
   const meta = typedOutput.meta;
+
+  const styleSnapshot =
+    visualStyleSnapshot ||
+    ((typedOutput as Record<string, unknown>)?.visual_style_snapshot as Record<string, unknown> | null | undefined);
+
+  const styleDisplayName =
+    typeof styleSnapshot?.display_name === "string" && styleSnapshot.display_name.trim()
+      ? styleSnapshot.display_name.trim()
+      : typeof styleSnapshot?.name === "string" && styleSnapshot.name.trim()
+      ? styleSnapshot.name.trim()
+      : typeof styleSnapshot?.id === "string" && styleSnapshot.id.trim()
+      ? styleSnapshot.id.trim()
+      : null;
 
   const entities = vb.entities || {};
   const environments = entities.environments || [];
@@ -290,10 +305,10 @@ export function VideoBibleOutputView({
                   <span className="font-bold text-slate-800">{artDirection.style_family}</span>
                 </div>
               )}
-              {artDirection.visual_genre && (
+              {styleDisplayName && (
                 <div className="rounded-lg bg-slate-50 p-2 border border-slate-200">
-                  <span className="text-[10px] font-semibold text-slate-400 block uppercase">Genre:</span>
-                  <span className="font-bold text-slate-800">{artDirection.visual_genre}</span>
+                  <span className="text-[10px] font-semibold text-slate-400 block uppercase">Style Snapshot:</span>
+                  <span className="font-bold text-slate-800">{styleDisplayName}</span>
                 </div>
               )}
               {artDirection.rendering_texture && (

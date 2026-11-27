@@ -665,6 +665,7 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                   isAnyRunning={isAnyRunning}
                   videoId={videoId}
                   topic={video.topic}
+                  visualStyleSnapshot={video.visual_style_snapshot}
                   onRerun={async (stepName, prompt) => {
                     await rerunMutation.mutateAsync({ stepName, prompt });
                   }}

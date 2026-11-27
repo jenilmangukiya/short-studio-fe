@@ -241,12 +241,75 @@ export function getVisualIntentLabel(intent: VisualIntent | string | null | unde
   return VISUAL_INTENT_LABELS[intent as VisualIntent] || String(intent).replace(/_/g, " ");
 }
 
+export const ALLOWED_VISUAL_TECHNIQUES = [
+  "cinematic_illustration",
+  "physical_close_up",
+  "in_scene_cue",
+  "cutaway",
+  "diagram",
+] as const;
+
+export type VisualTechnique = (typeof ALLOWED_VISUAL_TECHNIQUES)[number];
+
+export const DEFAULT_VISUAL_TECHNIQUE: VisualTechnique = "cinematic_illustration";
+
+export const VISUAL_TECHNIQUE_LABELS: Record<VisualTechnique, string> = {
+  cinematic_illustration: "Cinematic Illustration",
+  physical_close_up: "Physical Close-up",
+  in_scene_cue: "In-scene Cue",
+  cutaway: "Cutaway",
+  diagram: "Diagram",
+};
+
+export function isValidVisualTechnique(val: unknown): val is VisualTechnique {
+  return typeof val === "string" && (ALLOWED_VISUAL_TECHNIQUES as readonly string[]).includes(val);
+}
+
+export function getVisualTechniqueLabel(technique: VisualTechnique | string | null | undefined): string {
+  if (!technique) return "";
+  return VISUAL_TECHNIQUE_LABELS[technique as VisualTechnique] || String(technique).replace(/_/g, " ");
+}
+
+export const ALLOWED_BEAT_TRANSITIONS = [
+  "establishing",
+  "same_scene_reframe",
+  "action_reaction",
+  "spatial_cutaway",
+  "location_change",
+  "explanatory_cutaway",
+  "surreal_metaphor",
+  "resolution_return",
+] as const;
+
+export type BeatTransition = (typeof ALLOWED_BEAT_TRANSITIONS)[number];
+
+export const BEAT_TRANSITION_LABELS: Record<BeatTransition, string> = {
+  establishing: "Establishing",
+  same_scene_reframe: "Same-scene Reframe",
+  action_reaction: "Action / Reaction",
+  spatial_cutaway: "Spatial Cutaway",
+  location_change: "Location Change",
+  explanatory_cutaway: "Explanatory Cutaway",
+  surreal_metaphor: "Surreal Metaphor",
+  resolution_return: "Resolution Return",
+};
+
+export function isValidBeatTransition(val: unknown): val is BeatTransition {
+  return typeof val === "string" && (ALLOWED_BEAT_TRANSITIONS as readonly string[]).includes(val);
+}
+
+export function getBeatTransitionLabel(transition: BeatTransition | string | null | undefined): string {
+  if (!transition) return "";
+  return BEAT_TRANSITION_LABELS[transition as BeatTransition] || String(transition).replace(/_/g, " ");
+}
+
 export interface VisualBeat {
   id: string;
   scene_id?: string;
   order: number;
   narration_text: string;
   visual_intent: VisualIntent;
+  visual_technique?: VisualTechnique;
   start_time?: number | null;
   end_time?: number | null;
   duration_seconds?: number | null;
@@ -258,7 +321,8 @@ export interface VisualBeat {
   shot_type?: string;
   camera_angle?: string;
   focal_point?: string;
-  visual_technique?: string;
+  entity_bindings?: EntityBindings | null;
+  transition_from_previous?: BeatTransition;
   image_strategy?: ImageStrategy;
   source_image_id?: string | null;
   [key: string]: unknown;
@@ -271,12 +335,14 @@ export interface StoryboardScene {
   shot_type: string;
   est_seconds: number;
   visual_intent: VisualIntent;
+  visual_technique?: VisualTechnique;
   visual_purpose?: string;
   camera_angle?: string;
   focal_point?: string;
-  visual_technique?: string;
   environment?: string;
   uses_anchor?: boolean;
+  entity_bindings?: EntityBindings | null;
+  transition_from_previous?: BeatTransition;
   final_prompt?: string;
   animation?: Record<string, unknown> | null;
   visual_beats?: VisualBeat[];
@@ -641,7 +707,6 @@ export interface CreativeDirectionOutput {
   storytelling_angle: string;
   central_thesis: string;
   tone: string;
-  visual_genre: "photorealistic_cinematic" | "styled_3d" | "stickman_illustrated" | "technical_schematic" | "mixed_format";
   protagonist_config: ProtagonistConfig;
   emotional_progression?: EmotionalBeat[];
   creative_constraints?: string[];
@@ -720,7 +785,6 @@ export interface ArtDirection {
   rendering_engine_flavor?: string;
   primary_palette_hex?: string[];
   negative_prompt_tokens?: string;
-  visual_genre?: string;
   lighting_philosophy?: string;
   rendering_texture?: string;
   negative_anchors?: string[];
@@ -807,8 +871,9 @@ export interface StoryboardBeat {
   narration_slice: string;
   duration_est_seconds: number;
   visual_intent: VisualIntent;
+  visual_technique?: VisualTechnique;
   entity_bindings: EntityBindings;
-  transition_from_previous?: "establishing" | "same_scene_reframe" | "action_reaction" | "spatial_cutaway" | "location_change" | "explanatory_cutaway" | "surreal_metaphor" | "resolution_return";
+  transition_from_previous?: BeatTransition;
   continuity_intent?: string;
   camera: CameraDirection;
   character_state?: CharacterState | null;

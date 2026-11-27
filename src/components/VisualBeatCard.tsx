@@ -2,7 +2,11 @@
 
 import { useMemo } from "react";
 import type { BeatTelemetryInfo, VisualBeat } from "@/lib/types";
-import { getVisualIntentLabel } from "@/lib/types";
+import {
+  getBeatTransitionLabel,
+  getVisualIntentLabel,
+  getVisualTechniqueLabel,
+} from "@/lib/types";
 import {
   type BeatImageSourceResult,
   getBeatImageStrategyDisplay,
@@ -104,6 +108,7 @@ export function VisualBeatCard({
   const hasPurpose = Boolean(beat.visual_purpose && beat.visual_purpose.trim());
 
   const hasFramingMeta = Boolean(
+    (beat.transition_from_previous && beat.transition_from_previous.trim()) ||
     (beat.camera_angle && beat.camera_angle.trim()) ||
     (beat.visual_technique && beat.visual_technique.trim()) ||
     (beat.focal_point && beat.focal_point.trim())
@@ -329,9 +334,14 @@ export function VisualBeatCard({
             </div>
           )}
 
-          {/* Camera Angle, Technique, and Focal Point */}
+          {/* Transition, Camera Angle, Technique, and Focal Point */}
           {hasFramingMeta && (
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[11px]">
+              {beat.transition_from_previous && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200">
+                  <span className="text-slate-400">Transition:</span> {getBeatTransitionLabel(beat.transition_from_previous)}
+                </span>
+              )}
               {beat.camera_angle && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200">
                   <span className="text-slate-400">Angle:</span> {beat.camera_angle}
@@ -339,7 +349,7 @@ export function VisualBeatCard({
               )}
               {beat.visual_technique && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200">
-                  <span className="text-slate-400">Technique:</span> {beat.visual_technique}
+                  <span className="text-slate-400">Technique:</span> {getVisualTechniqueLabel(beat.visual_technique)}
                 </span>
               )}
               {beat.focal_point && (

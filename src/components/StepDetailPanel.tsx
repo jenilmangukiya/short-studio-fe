@@ -33,6 +33,7 @@ interface StepDetailPanelProps {
   onRollback?: (stepName: string, version: number) => Promise<void>;
   videoId: string;
   topic?: string;
+  visualStyleSnapshot?: Record<string, unknown> | null;
 }
 
 function getBadgeStyle(status: StepStatus | string) {
@@ -63,6 +64,7 @@ export function StepDetailPanel({
   onRollback,
   videoId,
   topic,
+  visualStyleSnapshot,
 }: StepDetailPanelProps) {
   const [isRerunOpen, setIsRerunOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -420,11 +422,21 @@ export function StepDetailPanel({
                 </div>
                 <div className="opacity-50 pointer-events-none filter grayscale-30">
                   {isCreativeDirection ? (
-                    <CreativeDirectionOutputView output={step.output} isMock={isMock} isStale={true} />
+                    <CreativeDirectionOutputView
+                      output={step.output}
+                      isMock={isMock}
+                      isStale={true}
+                      visualStyleSnapshot={visualStyleSnapshot}
+                    />
                   ) : isScript ? (
                     <ScriptOutputView output={step.output} />
                   ) : isVideoBible ? (
-                    <VideoBibleOutputView output={step.output} isMock={isMock} isStale={true} />
+                    <VideoBibleOutputView
+                      output={step.output}
+                      isMock={isMock}
+                      isStale={true}
+                      visualStyleSnapshot={visualStyleSnapshot}
+                    />
                   ) : isStoryboard ? (
                     <StoryboardOutputView
                       output={step.output}
@@ -497,7 +509,12 @@ export function StepDetailPanel({
         {!isStale && !isPending && step.output && (
           <div>
             {isCreativeDirection ? (
-              <CreativeDirectionOutputView output={step.output} isMock={isMock} isStale={false} />
+              <CreativeDirectionOutputView
+                output={step.output}
+                isMock={isMock}
+                isStale={false}
+                visualStyleSnapshot={visualStyleSnapshot}
+              />
             ) : isScript ? (
               <ScriptOutputView
                 output={step.output}
@@ -512,7 +529,12 @@ export function StepDetailPanel({
                 }}
               />
             ) : isVideoBible ? (
-              <VideoBibleOutputView output={step.output} isMock={isMock} isStale={false} />
+              <VideoBibleOutputView
+                output={step.output}
+                isMock={isMock}
+                isStale={false}
+                visualStyleSnapshot={visualStyleSnapshot}
+              />
             ) : isStoryboard ? (
               <StoryboardOutputView
                 output={step.output}

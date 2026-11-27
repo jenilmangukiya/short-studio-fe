@@ -89,7 +89,7 @@ test("2. Valid VisualBeat data is retained, including timing, image strategy, an
           shot_type: "wide",
           camera_angle: "eye-level",
           focal_point: "combustion chamber",
-          visual_technique: "technical-illustration",
+          visual_technique: "diagram",
           environment: "jet engine housing",
           uses_anchor: true,
           final_prompt: "Cinematic realism. Interior cross-section of a high-bypass turbofan.",
@@ -117,7 +117,7 @@ test("2. Valid VisualBeat data is retained, including timing, image strategy, an
               shot_type: "wide",
               camera_angle: "eye-level",
               focal_point: "rotor assembly",
-              visual_technique: "technical-illustration",
+              visual_technique: "diagram",
               image_strategy: "new_image",
               source_image_id: "1",
             },
@@ -137,7 +137,7 @@ test("2. Valid VisualBeat data is retained, including timing, image strategy, an
               shot_type: "macro",
               camera_angle: "low-angle",
               focal_point: "cooling holes",
-              visual_technique: "macro-photo",
+              visual_technique: "physical_close_up",
               image_strategy: "reuse_scene_image",
               source_image_id: "1",
             },
@@ -157,7 +157,7 @@ test("2. Valid VisualBeat data is retained, including timing, image strategy, an
   assert.equal(scene.visual_purpose, "Explain turbine durability");
   assert.equal(scene.camera_angle, "eye-level");
   assert.equal(scene.focal_point, "combustion chamber");
-  assert.equal(scene.visual_technique, "technical-illustration");
+  assert.equal(scene.visual_technique, "diagram");
   assert.equal(scene.environment, "jet engine housing");
   assert.equal(scene.uses_anchor, true);
   assert.equal(scene.final_prompt, "Cinematic realism. Interior cross-section of a high-bypass turbofan.");
@@ -840,7 +840,7 @@ test("20. Existing scene editing preserves visual beats and unrelated metadata",
       est_seconds: 4.5,
       camera_angle: "low-angle",
       focal_point: "cockpit controls",
-      visual_technique: "cinematic-photo",
+      visual_technique: "cinematic_illustration",
       visual_beats: [
         {
           visual_intent: "establishing",

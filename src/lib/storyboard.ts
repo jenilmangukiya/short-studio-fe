@@ -1,5 +1,7 @@
 import type {
   BeatTelemetryInfo,
+  BeatTransition,
+  EntityBindings,
   ImageStrategy,
   RenderAnimationItem,
   RenderData,
@@ -9,9 +11,14 @@ import type {
   StoryboardStyleSource,
   VisualBeat,
   VisualIntent,
+  VisualTechnique,
   VoiceoverItem,
 } from "./types";
-import { isValidVisualIntent } from "./types.ts";
+import {
+  isValidBeatTransition,
+  isValidVisualIntent,
+  isValidVisualTechnique,
+} from "./types.ts";
 
 export type ValidatedScene = StoryboardScene;
 
@@ -34,6 +41,9 @@ const KNOWN_BEAT_KEYS = new Set([
   "order",
   "narration_text",
   "visual_intent",
+  "visual_technique",
+  "entity_bindings",
+  "transition_from_previous",
   "start_time",
   "end_time",
   "duration_seconds",
@@ -45,7 +55,6 @@ const KNOWN_BEAT_KEYS = new Set([
   "shot_type",
   "camera_angle",
   "focal_point",
-  "visual_technique",
   "image_strategy",
   "source_image_id",
 ]);
@@ -58,7 +67,8 @@ const KNOWN_BEAT_KEYS = new Set([
 export function parseVisualBeat(
   raw: unknown,
   defaultOrder: number = 1,
-  defaultVisualIntent: VisualIntent = "environmental_context"
+  defaultVisualIntent: VisualIntent = "environmental_context",
+  defaultVisualTechnique?: VisualTechnique
 ): VisualBeat | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return null;
@@ -89,10 +99,29 @@ export function parseVisualBeat(
       : undefined;
 
   const narration_text = typeof b.narration_text === "string" ? b.narration_text : "";
-  const rawIntent = typeof b.visual_intent === "string" ? b.visual_intent : undefined;
+  const rawIntent = typeof b.visual_intent === "string" ? b.visual_intent.trim().toLowerCase() : undefined;
   const visual_intent: VisualIntent =
     rawIntent && isValidVisualIntent(rawIntent) ? rawIntent : defaultVisualIntent;
   const visual_description = typeof b.visual_description === "string" ? b.visual_description : "";
+
+  const rawTech = typeof b.visual_technique === "string" ? b.visual_technique.trim().toLowerCase() : undefined;
+  const visual_technique: VisualTechnique | undefined =
+    rawTech && isValidVisualTechnique(rawTech)
+      ? rawTech
+      : defaultVisualTechnique !== undefined && isValidVisualTechnique(defaultVisualTechnique)
+      ? defaultVisualTechnique
+      : undefined;
+
+  const entity_bindings: EntityBindings | undefined =
+    b.entity_bindings && typeof b.entity_bindings === "object" && !Array.isArray(b.entity_bindings)
+      ? (b.entity_bindings as EntityBindings)
+      : undefined;
+
+  const rawTransition = typeof b.transition_from_previous === "string" ? b.transition_from_previous.trim().toLowerCase() : undefined;
+  const transition_from_previous: BeatTransition | undefined =
+    rawTransition && isValidBeatTransition(rawTransition)
+      ? rawTransition
+      : undefined;
 
   const start_time =
     typeof b.start_time === "number" && Number.isFinite(b.start_time)
@@ -134,7 +163,6 @@ export function parseVisualBeat(
   const shot_type = typeof b.shot_type === "string" ? b.shot_type : undefined;
   const camera_angle = typeof b.camera_angle === "string" ? b.camera_angle : undefined;
   const focal_point = typeof b.focal_point === "string" ? b.focal_point : undefined;
-  const visual_technique = typeof b.visual_technique === "string" ? b.visual_technique : undefined;
   const image_strategy =
     typeof b.image_strategy === "string" ? (b.image_strategy as ImageStrategy) : undefined;
   const source_image_id =
@@ -148,6 +176,9 @@ export function parseVisualBeat(
     narration_text,
     visual_intent,
     visual_description,
+    ...(visual_technique !== undefined && { visual_technique }),
+    ...(entity_bindings !== undefined && { entity_bindings }),
+    ...(transition_from_previous !== undefined && { transition_from_previous }),
     ...(start_time !== undefined && { start_time }),
     ...(end_time !== undefined && { end_time }),
     ...(duration_seconds !== undefined && { duration_seconds }),
@@ -158,7 +189,6 @@ export function parseVisualBeat(
     ...(shot_type !== undefined && { shot_type }),
     ...(camera_angle !== undefined && { camera_angle }),
     ...(focal_point !== undefined && { focal_point }),
-    ...(visual_technique !== undefined && { visual_technique }),
     ...(image_strategy !== undefined && { image_strategy }),
     ...(source_image_id !== undefined && { source_image_id }),
   };
@@ -170,7 +200,8 @@ export function parseVisualBeat(
  */
 export function parseVisualBeats(
   rawBeats: unknown,
-  defaultVisualIntent: VisualIntent = "environmental_context"
+  defaultVisualIntent: VisualIntent = "environmental_context",
+  defaultVisualTechnique?: VisualTechnique
 ): VisualBeat[] | undefined {
   if (!Array.isArray(rawBeats)) {
     return undefined;
@@ -178,7 +209,7 @@ export function parseVisualBeats(
 
   const validBeats: VisualBeat[] = [];
   for (let i = 0; i < rawBeats.length; i++) {
-    const parsed = parseVisualBeat(rawBeats[i], i + 1, defaultVisualIntent);
+    const parsed = parseVisualBeat(rawBeats[i], i + 1, defaultVisualIntent, defaultVisualTechnique);
     if (parsed) {
       validBeats.push(parsed);
     }
@@ -218,9 +249,17 @@ export function parseAndValidateStoryboard(output: unknown): ValidatedStoryboard
     const narration = typeof item.narration === "string" ? item.narration : null;
     const image_prompt = typeof item.image_prompt === "string" ? item.image_prompt : null;
     const shot_type = typeof item.shot_type === "string" ? item.shot_type : null;
-    const rawIntent = typeof item.visual_intent === "string" ? item.visual_intent : undefined;
+    const rawIntent = typeof item.visual_intent === "string" ? item.visual_intent.trim().toLowerCase() : undefined;
     const visual_intent: VisualIntent =
       rawIntent && isValidVisualIntent(rawIntent) ? rawIntent : "environmental_context";
+
+    const rawTech = typeof item.visual_technique === "string" ? item.visual_technique.trim().toLowerCase() : undefined;
+    const scene_visual_technique: VisualTechnique | undefined =
+      rawTech && isValidVisualTechnique(rawTech) ? rawTech : undefined;
+
+    const rawTransition = typeof item.transition_from_previous === "string" ? item.transition_from_previous.trim().toLowerCase() : undefined;
+    const transition_from_previous: BeatTransition | undefined =
+      rawTransition && isValidBeatTransition(rawTransition) ? rawTransition : undefined;
 
     const estSec =
       typeof item.est_seconds === "number" && Number.isFinite(item.est_seconds) && item.est_seconds >= 0
@@ -249,6 +288,8 @@ export function parseAndValidateStoryboard(output: unknown): ValidatedStoryboard
         key !== "shot_type" &&
         key !== "est_seconds" &&
         key !== "visual_intent" &&
+        key !== "visual_technique" &&
+        key !== "transition_from_previous" &&
         key !== "visual_beats"
       ) {
         extraFields[key] = val;
@@ -263,9 +304,11 @@ export function parseAndValidateStoryboard(output: unknown): ValidatedStoryboard
       shot_type,
       est_seconds: estSec,
       visual_intent,
+      ...(scene_visual_technique !== undefined && { visual_technique: scene_visual_technique }),
+      ...(transition_from_previous !== undefined && { transition_from_previous }),
     };
 
-    const parsedBeats = parseVisualBeats(item.visual_beats, visual_intent);
+    const parsedBeats = parseVisualBeats(item.visual_beats, visual_intent, scene_visual_technique);
     if (parsedBeats !== undefined) {
       scene.visual_beats = parsedBeats;
     }
@@ -351,6 +394,7 @@ export function updateSceneInList(
     image_prompt?: string;
     shot_type?: string;
     visual_intent?: VisualIntent;
+    visual_technique?: VisualTechnique;
   }
 ): StoryboardScene[] {
   return scenes.map((s) => {
@@ -362,9 +406,14 @@ export function updateSceneInList(
         ...(updates.shot_type !== undefined && {
           shot_type: updates.shot_type.trim() || s.shot_type,
         }),
-        ...(updates.visual_intent !== undefined && {
-          visual_intent: updates.visual_intent,
-        }),
+        ...(updates.visual_intent !== undefined &&
+          isValidVisualIntent(updates.visual_intent) && {
+            visual_intent: updates.visual_intent,
+          }),
+        ...(updates.visual_technique !== undefined &&
+          isValidVisualTechnique(updates.visual_technique) && {
+            visual_technique: updates.visual_technique,
+          }),
       };
     }
     return s;

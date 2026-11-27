@@ -812,7 +812,7 @@ test("19. Stage 3.5.5.4 (Req 8): Editing storyboard content does not remove beat
           shot_type: "close-up",
           camera_angle: "low-angle",
           focal_point: "face",
-          visual_technique: "slow-pan",
+          visual_technique: "cinematic_illustration",
           image_strategy: "reuse_scene_image",
           start_time: 0.0,
           end_time: 2.0,
@@ -838,7 +838,7 @@ test("19. Stage 3.5.5.4 (Req 8): Editing storyboard content does not remove beat
   assert.equal(preservedBeat.shot_type, "close-up");
   assert.equal(preservedBeat.camera_angle, "low-angle");
   assert.equal(preservedBeat.focal_point, "face");
-  assert.equal(preservedBeat.visual_technique, "slow-pan");
+  assert.equal(preservedBeat.visual_technique, "cinematic_illustration");
   assert.equal(preservedBeat.image_strategy, "reuse_scene_image");
 });
 

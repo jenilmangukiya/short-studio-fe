@@ -8,12 +8,14 @@ interface CreativeDirectionOutputViewProps {
   output: unknown;
   isMock?: boolean;
   isStale?: boolean;
+  visualStyleSnapshot?: Record<string, unknown> | null;
 }
 
 export function CreativeDirectionOutputView({
   output,
   isMock = false,
   isStale = false,
+  visualStyleSnapshot,
 }: CreativeDirectionOutputViewProps) {
   const [showRaw, setShowRaw] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -30,6 +32,19 @@ export function CreativeDirectionOutputView({
   const cd = (typedOutput.creative_direction || typedOutput) as CreativeDirectionOutput;
   const warnings = Array.isArray(typedOutput.warnings) ? (typedOutput.warnings as string[]) : [];
   const meta = typedOutput.meta;
+
+  const styleSnapshot =
+    visualStyleSnapshot ||
+    ((typedOutput as Record<string, unknown>)?.visual_style_snapshot as Record<string, unknown> | null | undefined);
+
+  const styleDisplayName =
+    typeof styleSnapshot?.display_name === "string" && styleSnapshot.display_name.trim()
+      ? styleSnapshot.display_name.trim()
+      : typeof styleSnapshot?.name === "string" && styleSnapshot.name.trim()
+      ? styleSnapshot.name.trim()
+      : typeof styleSnapshot?.id === "string" && styleSnapshot.id.trim()
+      ? styleSnapshot.id.trim()
+      : null;
 
   const protagonist = cd.protagonist_config || { human_presence: "none" };
   const humanPresenceLabel = getHumanPresenceLabel(protagonist.human_presence);
@@ -61,7 +76,7 @@ export function CreativeDirectionOutputView({
 
       {/* Main Content Card */}
       <div className="space-y-4 bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
-        {/* Top Badges: Format Archetype, Visual Genre, Human Presence */}
+        {/* Top Badges: Format Archetype, Visual Style, Human Presence */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold text-sm text-slate-900">Creative Brief</span>
@@ -70,9 +85,17 @@ export function CreativeDirectionOutputView({
                 {cd.format_archetype.replace(/_/g, " ")}
               </span>
             )}
-            {cd.visual_genre && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-100">
-                {cd.visual_genre.replace(/_/g, " ")}
+            {styleDisplayName && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-100"
+                title={
+                  typeof styleSnapshot?.description === "string"
+                    ? styleSnapshot.description
+                    : `Visual Style: ${styleDisplayName}`
+                }
+              >
+                <span>🎨</span>
+                <span>{styleDisplayName}</span>
               </span>
             )}
           </div>
@@ -87,6 +110,30 @@ export function CreativeDirectionOutputView({
             </span>
           </div>
         </div>
+
+        {/* Frozen Visual Style Snapshot (Single Source of Truth) */}
+        {styleSnapshot && (
+          <div className="rounded-lg bg-indigo-50/40 border border-indigo-100/80 p-3 text-xs space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+                Visual Style (Frozen Snapshot)
+              </span>
+              {Boolean(styleSnapshot.category) && (
+                <span className="text-[10px] font-medium text-indigo-600 capitalize">
+                  {String(styleSnapshot.category).replace(/_/g, " ")}
+                </span>
+              )}
+            </div>
+            {styleDisplayName && (
+              <p className="font-semibold text-slate-800 text-xs">{styleDisplayName}</p>
+            )}
+            {typeof styleSnapshot.description === "string" && styleSnapshot.description && (
+              <p className="text-slate-600 text-[11px] leading-relaxed">
+                {styleSnapshot.description}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Narrative Core: Central Thesis & Storytelling Angle */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
