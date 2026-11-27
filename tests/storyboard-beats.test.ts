@@ -198,6 +198,7 @@ test("2. Valid VisualBeat data is retained, including timing, image strategy, an
 
 test("3. Editing narration preserves all unrelated scene properties", () => {
   const originalScene: StoryboardScene = {
+    visual_intent: "establishing",
     index: 1,
     narration: "Original narration text.",
     image_prompt: "Original visual prompt.",
@@ -211,6 +212,7 @@ test("3. Editing narration preserves all unrelated scene properties", () => {
     animation: { animation_type: "pan-left" },
     visual_beats: [
       {
+        visual_intent: "establishing",
         id: "beat_1_1",
         order: 1,
         narration_text: "Original beat text",
@@ -248,6 +250,7 @@ test("3. Editing narration preserves all unrelated scene properties", () => {
 
 test("4. Editing the image prompt preserves all unrelated scene properties", () => {
   const originalScene: StoryboardScene = {
+    visual_intent: "establishing",
     index: 2,
     narration: "Keep this narration exactly as is.",
     image_prompt: "Initial prompt text.",
@@ -257,6 +260,7 @@ test("4. Editing the image prompt preserves all unrelated scene properties", () 
     final_prompt: "Initial full prompt",
     visual_beats: [
       {
+        visual_intent: "establishing",
         id: "beat_2_1",
         order: 1,
         narration_text: "Keep this narration",
@@ -390,6 +394,7 @@ test("6. Missing or malformed optional beat data does not crash the storyboard v
 test("7. The saved payload matches the actual backend update contract", () => {
   const originalScenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1 narration.",
       image_prompt: "Scene 1 prompt.",
@@ -398,6 +403,7 @@ test("7. The saved payload matches the actual backend update contract", () => {
       camera_angle: "eye-level",
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "beat_1_1",
           order: 1,
           narration_text: "Scene 1 beat",
@@ -481,6 +487,7 @@ test("8. Aligned timing formatting correctly renders MM:SS.SS intervals", () => 
   assert.equal(formatTimestamp(65.5), "01:05.50");
 
   const alignedBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Sample text",
@@ -498,6 +505,7 @@ test("8. Aligned timing formatting correctly renders MM:SS.SS intervals", () => 
 
 test("9. Unassigned timing renders clear pending status", () => {
   const unassignedBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_2",
     order: 2,
     narration_text: "Unassigned beat",
@@ -520,6 +528,7 @@ test("9. Unassigned timing renders clear pending status", () => {
 
 test("10. Fallback and proportional timing renders indicator", () => {
   const proportionalBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_3",
     order: 3,
     narration_text: "Proportional beat",
@@ -535,6 +544,7 @@ test("10. Fallback and proportional timing renders indicator", () => {
   assert.ok(displayProp.badgeStyle.includes("blue"));
 
   const estimatedBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_4",
     order: 4,
     narration_text: "Estimated beat",
@@ -552,6 +562,7 @@ test("10. Fallback and proportional timing renders indicator", () => {
 test("11. Invalid or missing timestamps never output NaN or misleading values", () => {
   // Test with NaN, inverted interval (end < start), negative numbers
   const nanBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_nan",
     order: 1,
     narration_text: "Corrupt timing",
@@ -567,6 +578,7 @@ test("11. Invalid or missing timestamps never output NaN or misleading values", 
   assert.ok(!displayNaN.text.includes("NaN"));
 
   const invertedBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_inv",
     order: 2,
     narration_text: "Inverted interval",
@@ -581,6 +593,7 @@ test("11. Invalid or missing timestamps never output NaN or misleading values", 
   assert.equal(displayInv.text, "Pending voiceover");
 
   const negativeBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_neg",
     order: 3,
     narration_text: "Negative time",
@@ -655,15 +668,16 @@ test("14. Missing narration or visual description handled safely", () => {
 
 test("15. hasVisualBeats and getVisualBeatsCount correctly detect beats", () => {
   const sceneWithBeats: StoryboardScene = {
+    visual_intent: "establishing",
     index: 1,
     narration: "Narr",
     image_prompt: "Prompt",
     shot_type: "wide",
     est_seconds: 4.0,
     visual_beats: [
-      { id: "beat_1_1", order: 1, narration_text: "Beat 1", visual_description: "Moment 1" },
-      { id: "beat_1_2", order: 2, narration_text: "Beat 2", visual_description: "Moment 2" },
-      { id: "beat_1_3", order: 3, narration_text: "Beat 3", visual_description: "Moment 3" },
+      { visual_intent: "establishing", id: "beat_1_1", order: 1, narration_text: "Beat 1", visual_description: "Moment 1" },
+      { visual_intent: "establishing", id: "beat_1_2", order: 2, narration_text: "Beat 2", visual_description: "Moment 2" },
+      { visual_intent: "establishing", id: "beat_1_3", order: 3, narration_text: "Beat 3", visual_description: "Moment 3" },
     ],
   };
 
@@ -672,6 +686,7 @@ test("15. hasVisualBeats and getVisualBeatsCount correctly detect beats", () => 
 
   // Legacy scene without visual_beats
   const legacyScene: StoryboardScene = {
+    visual_intent: "establishing",
     index: 2,
     narration: "Narr",
     image_prompt: "Prompt",
@@ -684,6 +699,7 @@ test("15. hasVisualBeats and getVisualBeatsCount correctly detect beats", () => 
 
   // Scene with empty visual_beats array
   const sceneWithEmptyBeats: StoryboardScene = {
+    visual_intent: "establishing",
     index: 3,
     narration: "Narr",
     image_prompt: "Prompt",
@@ -816,6 +832,7 @@ test("19. Legacy scenes without visual_beats array remain completely unaffected"
 test("20. Existing scene editing preserves visual beats and unrelated metadata", () => {
   const initialScenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Original narration",
       image_prompt: "Original prompt",
@@ -826,6 +843,7 @@ test("20. Existing scene editing preserves visual beats and unrelated metadata",
       visual_technique: "cinematic-photo",
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "beat_1_1",
           order: 1,
           narration_text: "Original beat narration",
@@ -861,6 +879,7 @@ test("20. Existing scene editing preserves visual beats and unrelated metadata",
 
 test("21. resolveBeatImageSource: reuse_scene_image resolves to parent scene index with Scene Image label", () => {
   const beat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_2_1",
     order: 1,
     narration_text: "Scene 2 beat 1",
@@ -880,6 +899,7 @@ test("21. resolveBeatImageSource: reuse_scene_image resolves to parent scene ind
 
   // Default strategy (unspecified) also resolves to parent scene image
   const beatNoStrategy: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_2_2",
     order: 2,
     narration_text: "Scene 2 beat 2",
@@ -897,6 +917,7 @@ test("21. resolveBeatImageSource: reuse_scene_image resolves to parent scene ind
 
 test("22. resolveBeatImageSource: reuse_scene_image with missing parent image marks isAvailable as false", () => {
   const beat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_4_1",
     order: 1,
     narration_text: "Scene 4 beat 1",
@@ -919,6 +940,7 @@ test("22. resolveBeatImageSource: reuse_scene_image with missing parent image ma
 
 test("23. resolveBeatImageSource: reuse_previous_image resolves to previous beat's image index", () => {
   const beat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_2_2",
     order: 2,
     narration_text: "Scene 2 beat 2",
@@ -942,6 +964,7 @@ test("23. resolveBeatImageSource: reuse_previous_image resolves to previous beat
 
 test("24. resolveBeatImageSource: reuse_previous_image with no previous beat resolves to unavailable", () => {
   const firstBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1_1",
     order: 1,
     narration_text: "Scene 1 beat 1",
@@ -964,6 +987,7 @@ test("24. resolveBeatImageSource: reuse_previous_image with no previous beat res
 
 test("25. resolveBeatImageSource: reuse_previous_image fallback to explicit source_image_id and invalid ID handling", () => {
   const beatWithExplicitSource: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_3_1",
     order: 1,
     narration_text: "Scene 3 beat 1",
@@ -985,6 +1009,7 @@ test("25. resolveBeatImageSource: reuse_previous_image fallback to explicit sour
 
   // Invalid / non-numeric source_image_id resolves to unavailable
   const beatWithBadSource: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_3_2",
     order: 2,
     narration_text: "Scene 3 beat 2",
@@ -1002,6 +1027,7 @@ test("25. resolveBeatImageSource: reuse_previous_image fallback to explicit sour
 
 test("26. resolveBeatImageSource: new_image without distinct asset resolves to new_image_required placeholder", () => {
   const beat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1_2",
     order: 2,
     narration_text: "Scene 1 beat 2",
@@ -1026,6 +1052,7 @@ test("26. resolveBeatImageSource: new_image without distinct asset resolves to n
 
 test("27. resolveBeatImageSource: new_image with distinct asset in beatImageMap resolves to new_image_available", () => {
   const beat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_custom_asset",
     order: 1,
     narration_text: "Custom asset beat",
@@ -1050,6 +1077,7 @@ test("27. resolveBeatImageSource: new_image with distinct asset in beatImageMap 
 test("28. resolveStoryboardBeatImages: threads sequential beat image resolution across multiple scenes", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "Prompt 1",
@@ -1057,12 +1085,14 @@ test("28. resolveStoryboardBeatImages: threads sequential beat image resolution 
       est_seconds: 5.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "beat_1_1",
           order: 1,
           narration_text: "Beat 1.1 narration",
           image_strategy: "reuse_scene_image",
         },
         {
+          visual_intent: "establishing",
           id: "beat_1_2",
           order: 2,
           narration_text: "Beat 1.2 narration",
@@ -1071,6 +1101,7 @@ test("28. resolveStoryboardBeatImages: threads sequential beat image resolution 
       ],
     },
     {
+      visual_intent: "establishing",
       index: 2,
       narration: "Scene 2",
       image_prompt: "Prompt 2",
@@ -1078,12 +1109,14 @@ test("28. resolveStoryboardBeatImages: threads sequential beat image resolution 
       est_seconds: 5.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "beat_2_1",
           order: 1,
           narration_text: "Beat 2.1 narration",
           image_strategy: "reuse_previous_image",
         },
         {
+          visual_intent: "establishing",
           id: "beat_2_2",
           order: 2,
           narration_text: "Beat 2.2 narration",
@@ -1092,6 +1125,7 @@ test("28. resolveStoryboardBeatImages: threads sequential beat image resolution 
       ],
     },
     {
+      visual_intent: "establishing",
       index: 3,
       narration: "Scene 3 legacy without beats",
       image_prompt: "Prompt 3",
@@ -1135,6 +1169,7 @@ test("28. resolveStoryboardBeatImages: threads sequential beat image resolution 
 
 test("29. resolveBeatTimingSource: Render timing takes highest precedence when valid and not stale", () => {
   const storyboardBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Storyboard text",
@@ -1145,6 +1180,7 @@ test("29. resolveBeatTimingSource: Render timing takes highest precedence when v
   };
 
   const voBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Voiceover text",
@@ -1183,6 +1219,7 @@ test("29. resolveBeatTimingSource: Render timing takes highest precedence when v
 
 test("30. resolveBeatTimingSource: Voiceover aligned timing takes precedence over storyboard when render is unavailable", () => {
   const storyboardBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Storyboard text",
@@ -1192,6 +1229,7 @@ test("30. resolveBeatTimingSource: Voiceover aligned timing takes precedence ove
   };
 
   const voBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Voiceover text",
@@ -1214,6 +1252,7 @@ test("30. resolveBeatTimingSource: Voiceover aligned timing takes precedence ove
 
 test("31. resolveBeatTimingSource: Voiceover proportional timing is preserved with proportional indicator", () => {
   const voBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Voiceover text",
@@ -1234,6 +1273,7 @@ test("31. resolveBeatTimingSource: Voiceover proportional timing is preserved wi
 
 test("32. resolveBeatTimingSource: Storyboard timing is used when render and voiceover are missing", () => {
   const storyboardBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Storyboard text",
@@ -1253,6 +1293,7 @@ test("32. resolveBeatTimingSource: Storyboard timing is used when render and voi
 
 test("33. resolveBeatTimingSource: Pending/unassigned beat returns null start/end with Pending voiceover label", () => {
   const storyboardBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Pending beat",
@@ -1273,6 +1314,7 @@ test("33. resolveBeatTimingSource: Pending/unassigned beat returns null start/en
 test("34. resolveBeatTimingSource: Invalid, negative, or inverted timestamps fall back cleanly", () => {
   // Inverted timestamps (end < start)
   const invalidVo: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Invalid timing text",
@@ -1282,6 +1324,7 @@ test("34. resolveBeatTimingSource: Invalid, negative, or inverted timestamps fal
   };
 
   const validStoryboard: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Valid storyboard text",
@@ -1303,6 +1346,7 @@ test("34. resolveBeatTimingSource: Invalid, negative, or inverted timestamps fal
 
 test("35. resolveBeatTimingSource: Stale render records are ignored and fall back to voiceover/storyboard", () => {
   const voBeat: VisualBeat = {
+    visual_intent: "establishing",
     id: "beat_1",
     order: 1,
     narration_text: "Voiceover text",
@@ -1333,14 +1377,15 @@ test("35. resolveBeatTimingSource: Stale render records are ignored and fall bac
 test("36. correlateBeatsWithTelemetry: Matches rendered beat animation by composite scene_index and beat_id", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 5.0,
       visual_beats: [
-        { id: "b1_1", order: 1, narration_text: "Beat 1.1" },
-        { id: "b1_2", order: 2, narration_text: "Beat 1.2" },
+        { visual_intent: "establishing", id: "b1_1", order: 1, narration_text: "Beat 1.1" },
+        { visual_intent: "establishing", id: "b1_2", order: 2, narration_text: "Beat 1.2" },
       ],
     },
   ];
@@ -1395,13 +1440,14 @@ test("36. correlateBeatsWithTelemetry: Matches rendered beat animation by compos
 test("37. correlateBeatsWithTelemetry: Fallback to beat_order when beat_id differs", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 4.0,
       visual_beats: [
-        { id: "frontend_beat_id", order: 1, narration_text: "Beat 1" },
+        { visual_intent: "establishing", id: "frontend_beat_id", order: 1, narration_text: "Beat 1" },
       ],
     },
   ];
@@ -1440,7 +1486,8 @@ test("38. correlateBeatsWithTelemetry: Multi-scene isolation - same beat_order i
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 3.0,
-      visual_beats: [{ id: "b1", order: 1, narration_text: "S1 Beat 1" }],
+      visual_intent: "establishing",
+      visual_beats: [{ id: "b1", order: 1, visual_intent: "establishing", narration_text: "S1 Beat 1" }],
     },
     {
       index: 2,
@@ -1448,7 +1495,8 @@ test("38. correlateBeatsWithTelemetry: Multi-scene isolation - same beat_order i
       image_prompt: "P2",
       shot_type: "close-up",
       est_seconds: 3.0,
-      visual_beats: [{ id: "b2", order: 1, narration_text: "S2 Beat 1" }],
+      visual_intent: "establishing",
+      visual_beats: [{ id: "b2", order: 1, visual_intent: "establishing", narration_text: "S2 Beat 1" }],
     },
   ];
 
@@ -1478,14 +1526,15 @@ test("38. correlateBeatsWithTelemetry: Multi-scene isolation - same beat_order i
 test("39. correlateBeatsWithTelemetry: Scene-level fallback correctly flagged as scene_fallback with fallback reason", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 5.0,
       visual_beats: [
-        { id: "b1_1", order: 1, narration_text: "Beat 1.1" },
-        { id: "b1_2", order: 2, narration_text: "Beat 1.2" },
+        { visual_intent: "establishing", id: "b1_1", order: 1, narration_text: "Beat 1.1" },
+        { visual_intent: "establishing", id: "b1_2", order: 2, narration_text: "Beat 1.2" },
       ],
     },
   ];
@@ -1531,7 +1580,8 @@ test("40. correlateBeatsWithTelemetry: Missing render telemetry correctly mapped
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 4.0,
-      visual_beats: [{ id: "b1", order: 1, narration_text: "Beat 1" }],
+      visual_intent: "establishing",
+      visual_beats: [{ id: "b1", order: 1, visual_intent: "establishing", narration_text: "Beat 1" }],
     },
   ];
 
@@ -1552,7 +1602,8 @@ test("41. correlateBeatsWithTelemetry: Stale render telemetry mapped as stale wi
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 4.0,
-      visual_beats: [{ id: "b1", order: 1, narration_text: "Beat 1" }],
+      visual_intent: "establishing",
+      visual_beats: [{ id: "b1", order: 1, visual_intent: "establishing", narration_text: "Beat 1" }],
     },
   ];
 
@@ -1587,6 +1638,7 @@ test("41. correlateBeatsWithTelemetry: Stale render telemetry mapped as stale wi
 test("42. correlateBeatsWithTelemetry: Voiceover beat overlays storyboard beat timing and narration", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Storyboard scene narration",
       image_prompt: "P1",
@@ -1594,6 +1646,7 @@ test("42. correlateBeatsWithTelemetry: Voiceover beat overlays storyboard beat t
       est_seconds: 4.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "b1",
           order: 1,
           narration_text: "Draft storyboard narration",
@@ -1617,6 +1670,7 @@ test("42. correlateBeatsWithTelemetry: Voiceover beat overlays storyboard beat t
       duration_seconds: 2.5,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "b1",
           order: 1,
           narration_text: "Aligned voiceover narration",
@@ -1647,6 +1701,7 @@ test("42. correlateBeatsWithTelemetry: Voiceover beat overlays storyboard beat t
 test("43. correlateBeatsWithTelemetry: Legacy scenes without visual beats correlate cleanly without errors", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Legacy scene",
       image_prompt: "P1",
@@ -1678,6 +1733,7 @@ test("43. correlateBeatsWithTelemetry: Legacy scenes without visual beats correl
 test("44. resolveCorrelatedBeatTiming: End-to-end timing resolution from correlated result", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
@@ -1685,6 +1741,7 @@ test("44. resolveCorrelatedBeatTiming: End-to-end timing resolution from correla
       est_seconds: 3.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "b1",
           order: 1,
           narration_text: "Beat 1 narration",
@@ -1798,24 +1855,26 @@ test("47. Stage 3.5.5.3: Stale render telemetry produces stale status badge", ()
 test("48. Stage 3.5.5.3: Scene-level fallback is accurately identified per scene and beats count is isolated", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1 rendered beats",
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 4.0,
       visual_beats: [
-        { id: "s1_b1", order: 1, narration_text: "Beat 1", start_time: 0.0, end_time: 2.0 },
-        { id: "s1_b2", order: 2, narration_text: "Beat 2", start_time: 2.0, end_time: 4.0 },
+        { visual_intent: "establishing", id: "s1_b1", order: 1, narration_text: "Beat 1", start_time: 0.0, end_time: 2.0 },
+        { visual_intent: "establishing", id: "s1_b2", order: 2, narration_text: "Beat 2", start_time: 2.0, end_time: 4.0 },
       ],
     },
     {
+      visual_intent: "establishing",
       index: 2,
       narration: "Scene 2 fallback",
       image_prompt: "P2",
       shot_type: "medium",
       est_seconds: 3.0,
       visual_beats: [
-        { id: "s2_b1", order: 1, narration_text: "Beat 1", start_time: 4.0, end_time: 7.0 },
+        { visual_intent: "establishing", id: "s2_b1", order: 1, narration_text: "Beat 1", start_time: 4.0, end_time: 7.0 },
       ],
     },
   ];
@@ -1859,24 +1918,26 @@ test("48. Stage 3.5.5.3: Scene-level fallback is accurately identified per scene
 test("49. Stage 3.5.5.3: Top summary card metrics reflect total, rendered, and fallback scenes", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
       shot_type: "close-up",
       est_seconds: 3.0,
       visual_beats: [
-        { id: "b1", order: 1, narration_text: "Text 1" },
-        { id: "b2", order: 2, narration_text: "Text 2" },
+        { visual_intent: "establishing", id: "b1", order: 1, narration_text: "Text 1" },
+        { visual_intent: "establishing", id: "b2", order: 2, narration_text: "Text 2" },
       ],
     },
     {
+      visual_intent: "establishing",
       index: 2,
       narration: "Scene 2",
       image_prompt: "P2",
       shot_type: "wide",
       est_seconds: 3.0,
       visual_beats: [
-        { id: "b3", order: 1, narration_text: "Text 3" },
+        { visual_intent: "establishing", id: "b3", order: 1, narration_text: "Text 3" },
       ],
     },
   ];

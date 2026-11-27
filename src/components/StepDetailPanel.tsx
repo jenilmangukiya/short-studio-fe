@@ -10,6 +10,8 @@ import type {
   VoiceoverItem,
 } from "@/lib/types";
 import { ScriptOutputView } from "./ScriptOutputView";
+import { CreativeDirectionOutputView } from "./CreativeDirectionOutputView";
+import { VideoBibleOutputView } from "./VideoBibleOutputView";
 import { StoryboardOutputView } from "./StoryboardOutputView";
 import { ImagesOutputView } from "./ImagesOutputView";
 import { VoiceoverOutputView } from "./VoiceoverOutputView";
@@ -82,7 +84,9 @@ export function StepDetailPanel({
   const isPending = step.status === "pending";
   const isAwaitingApproval = step.status === "awaiting_approval";
 
+  const isCreativeDirection = step.name.toLowerCase() === "creative_direction";
   const isScript = step.name.toLowerCase() === "script";
+  const isVideoBible = step.name.toLowerCase() === "video_bible";
   const isStoryboard = step.name.toLowerCase() === "storyboard";
   const isImages = step.name.toLowerCase() === "images";
   const isVoiceover = step.name.toLowerCase() === "voiceover";
@@ -415,8 +419,12 @@ export function StepDetailPanel({
                   <span>⏳</span> Outdated, will be regenerated
                 </div>
                 <div className="opacity-50 pointer-events-none filter grayscale-30">
-                  {isScript ? (
+                  {isCreativeDirection ? (
+                    <CreativeDirectionOutputView output={step.output} isMock={isMock} isStale={true} />
+                  ) : isScript ? (
                     <ScriptOutputView output={step.output} />
+                  ) : isVideoBible ? (
+                    <VideoBibleOutputView output={step.output} isMock={isMock} isStale={true} />
                   ) : isStoryboard ? (
                     <StoryboardOutputView
                       output={step.output}
@@ -488,7 +496,9 @@ export function StepDetailPanel({
         {/* Standard Output (when not stale and not pending) */}
         {!isStale && !isPending && step.output && (
           <div>
-            {isScript ? (
+            {isCreativeDirection ? (
+              <CreativeDirectionOutputView output={step.output} isMock={isMock} isStale={false} />
+            ) : isScript ? (
               <ScriptOutputView
                 output={step.output}
                 isSaving={isUpdating}
@@ -501,6 +511,8 @@ export function StepDetailPanel({
                   }
                 }}
               />
+            ) : isVideoBible ? (
+              <VideoBibleOutputView output={step.output} isMock={isMock} isStale={false} />
             ) : isStoryboard ? (
               <StoryboardOutputView
                 output={step.output}

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { BeatTelemetryInfo, VisualBeat } from "@/lib/types";
+import { getVisualIntentLabel } from "@/lib/types";
 import {
   type BeatImageSourceResult,
   getBeatImageStrategyDisplay,
@@ -122,6 +123,15 @@ export function VisualBeatCard({
           {beat.shot_type && (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
               {beat.shot_type}
+            </span>
+          )}
+
+          {beat.visual_intent && (
+            <span
+              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200"
+              title={`Visual Intent: ${getVisualIntentLabel(beat.visual_intent)}`}
+            >
+              {getVisualIntentLabel(beat.visual_intent)}
             </span>
           )}
 

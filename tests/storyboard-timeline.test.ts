@@ -32,25 +32,27 @@ test("1. computeTimelineMetrics: Empty timeline data returns null duration and f
 test("2. computeTimelineMetrics: Multiple scenes and multiple beats compute exact counts and ruler ticks", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 5.0,
       visual_beats: [
-        { id: "b1_1", order: 1, narration_text: "Beat 1.1", start_time: 0.0, end_time: 2.5, timing_type: "aligned" },
-        { id: "b1_2", order: 2, narration_text: "Beat 1.2", start_time: 2.5, end_time: 5.0, timing_type: "aligned" },
+        { visual_intent: "establishing", id: "b1_1", order: 1, narration_text: "Beat 1.1", start_time: 0.0, end_time: 2.5, timing_type: "aligned" },
+        { visual_intent: "establishing", id: "b1_2", order: 2, narration_text: "Beat 1.2", start_time: 2.5, end_time: 5.0, timing_type: "aligned" },
       ],
     },
     {
+      visual_intent: "establishing",
       index: 2,
       narration: "Scene 2",
       image_prompt: "P2",
       shot_type: "close-up",
       est_seconds: 5.0,
       visual_beats: [
-        { id: "b2_1", order: 1, narration_text: "Beat 2.1", start_time: 5.0, end_time: 7.5, timing_type: "aligned" },
-        { id: "b2_2", order: 2, narration_text: "Beat 2.2", start_time: 7.5, end_time: 10.0, timing_type: "aligned" },
+        { visual_intent: "establishing", id: "b2_1", order: 1, narration_text: "Beat 2.1", start_time: 5.0, end_time: 7.5, timing_type: "aligned" },
+        { visual_intent: "establishing", id: "b2_2", order: 2, narration_text: "Beat 2.2", start_time: 7.5, end_time: 10.0, timing_type: "aligned" },
       ],
     },
   ];
@@ -77,13 +79,14 @@ test("2. computeTimelineMetrics: Multiple scenes and multiple beats compute exac
 test("3. computeBeatSegmentGeometry: Actual rendered timing, frames, and linear percentages", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 10.0,
       visual_beats: [
-        { id: "b1", order: 1, narration_text: "Rendered beat text" },
+        { visual_intent: "establishing", id: "b1", order: 1, narration_text: "Rendered beat text" },
       ],
     },
   ];
@@ -128,6 +131,7 @@ test("3. computeBeatSegmentGeometry: Actual rendered timing, frames, and linear 
 test("4. computeBeatSegmentGeometry: Voiceover-aligned and proportional timing badges", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
@@ -135,6 +139,7 @@ test("4. computeBeatSegmentGeometry: Voiceover-aligned and proportional timing b
       est_seconds: 6.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "b1",
           order: 1,
           narration_text: "Aligned beat",
@@ -143,6 +148,7 @@ test("4. computeBeatSegmentGeometry: Voiceover-aligned and proportional timing b
           timing_type: "aligned",
         },
         {
+          visual_intent: "establishing",
           id: "b2",
           order: 2,
           narration_text: "Proportional beat",
@@ -173,6 +179,7 @@ test("4. computeBeatSegmentGeometry: Voiceover-aligned and proportional timing b
 test("5. computeBeatSegmentGeometry: Storyboard planned timing is distinguished from executed timing", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
@@ -180,6 +187,7 @@ test("5. computeBeatSegmentGeometry: Storyboard planned timing is distinguished 
       est_seconds: 4.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "b1",
           order: 1,
           narration_text: "Planned beat",
@@ -202,6 +210,7 @@ test("5. computeBeatSegmentGeometry: Storyboard planned timing is distinguished 
 test("6. computeBeatSegmentGeometry: Pending beats receive NO fabricated timestamps or widths", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
@@ -209,6 +218,7 @@ test("6. computeBeatSegmentGeometry: Pending beats receive NO fabricated timesta
       est_seconds: 5.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "pending_b1",
           order: 1,
           narration_text: "Pending beat",
@@ -230,6 +240,7 @@ test("6. computeBeatSegmentGeometry: Pending beats receive NO fabricated timesta
 test("7. computeBeatSegmentGeometry: Scene-level fallback records are NEVER falsely marked as rendered", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
@@ -237,6 +248,7 @@ test("7. computeBeatSegmentGeometry: Scene-level fallback records are NEVER fals
       est_seconds: 6.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "b1_1",
           order: 1,
           narration_text: "Beat 1.1",
@@ -245,6 +257,7 @@ test("7. computeBeatSegmentGeometry: Scene-level fallback records are NEVER fals
           timing_type: "aligned",
         },
         {
+          visual_intent: "establishing",
           id: "b1_2",
           order: 2,
           narration_text: "Beat 1.2",
@@ -295,6 +308,7 @@ test("7. computeBeatSegmentGeometry: Scene-level fallback records are NEVER fals
 test("8. Unavailable and stale telemetry are accurately distinguished", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
@@ -302,6 +316,7 @@ test("8. Unavailable and stale telemetry are accurately distinguished", () => {
       est_seconds: 4.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "b1",
           order: 1,
           narration_text: "Beat 1",
@@ -348,6 +363,7 @@ test("8. Unavailable and stale telemetry are accurately distinguished", () => {
 test("9. computeSceneTrackGeometry: Legacy scenes without visual beats derive scene bounds cleanly", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Legacy scene narration without visual beats",
       image_prompt: "Prompt 1",
@@ -373,6 +389,7 @@ test("9. computeSceneTrackGeometry: Legacy scenes without visual beats derive sc
 test("10. Short or narrow segments preserve linear time proportion without distortion", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
@@ -380,6 +397,7 @@ test("10. Short or narrow segments preserve linear time proportion without disto
       est_seconds: 20.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "short_beat",
           order: 1,
           narration_text: "Very short beat",
@@ -388,6 +406,7 @@ test("10. Short or narrow segments preserve linear time proportion without disto
           timing_type: "aligned",
         },
         {
+          visual_intent: "establishing",
           id: "long_beat",
           order: 2,
           narration_text: "Long beat",
@@ -470,14 +489,15 @@ test("11. getTimelineTelemetryDisplay and getTimelineTimingBadge provide accessi
 test("12. Stage 3.5.5.4 (Req 1): Storyboard view receives and displays correct correlation data", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "A quick glimpse into space.",
       image_prompt: "Galactic nebula",
       shot_type: "wide",
       est_seconds: 4.0,
       visual_beats: [
-        { id: "b1", order: 1, narration_text: "A quick glimpse", visual_description: "Nebula cloud" },
-        { id: "b2", order: 2, narration_text: "into space", visual_description: "Stars zooming" },
+        { visual_intent: "establishing", id: "b1", order: 1, narration_text: "A quick glimpse", visual_description: "Nebula cloud" },
+        { visual_intent: "establishing", id: "b2", order: 2, narration_text: "into space", visual_description: "Stars zooming" },
       ],
     },
   ];
@@ -497,14 +517,15 @@ test("12. Stage 3.5.5.4 (Req 1): Storyboard view receives and displays correct c
 test("13. Stage 3.5.5.4 (Req 2): Voiceover alignment updates the timeline", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "A quick glimpse into space.",
       image_prompt: "Galactic nebula",
       shot_type: "wide",
       est_seconds: 4.0,
       visual_beats: [
-        { id: "b1", order: 1, narration_text: "A quick glimpse", timing_type: "unassigned" },
-        { id: "b2", order: 2, narration_text: "into space", timing_type: "unassigned" },
+        { visual_intent: "establishing", id: "b1", order: 1, narration_text: "A quick glimpse", timing_type: "unassigned" },
+        { visual_intent: "establishing", id: "b2", order: 2, narration_text: "into space", timing_type: "unassigned" },
       ],
     },
   ];
@@ -527,8 +548,8 @@ test("13. Stage 3.5.5.4 (Req 2): Voiceover alignment updates the timeline", () =
       audio_file: "scene_1.wav",
       duration_seconds: 4.2,
       visual_beats: [
-        { id: "b1", order: 1, narration_text: "A quick glimpse", start_time: 0.0, end_time: 1.8, timing_type: "aligned" },
-        { id: "b2", order: 2, narration_text: "into space", start_time: 1.8, end_time: 4.2, timing_type: "aligned" },
+        { visual_intent: "establishing", id: "b1", order: 1, narration_text: "A quick glimpse", start_time: 0.0, end_time: 1.8, timing_type: "aligned" },
+        { visual_intent: "establishing", id: "b2", order: 2, narration_text: "into space", start_time: 1.8, end_time: 4.2, timing_type: "aligned" },
       ],
     },
   ];
@@ -550,13 +571,14 @@ test("13. Stage 3.5.5.4 (Req 2): Voiceover alignment updates the timeline", () =
 test("14. Stage 3.5.5.4 (Req 3): Render execution timing takes precedence when valid", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Narrate beat 1",
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 3.0,
       visual_beats: [
-        { id: "b1", order: 1, narration_text: "Narrate beat 1", start_time: 0.0, end_time: 3.0, timing_type: "estimated" },
+        { visual_intent: "establishing", id: "b1", order: 1, narration_text: "Narrate beat 1", start_time: 0.0, end_time: 3.0, timing_type: "estimated" },
       ],
     },
   ];
@@ -571,7 +593,7 @@ test("14. Stage 3.5.5.4 (Req 3): Render execution timing takes precedence when v
       audio_file: "scene_1.wav",
       duration_seconds: 3.2,
       visual_beats: [
-        { id: "b1", order: 1, narration_text: "Narrate beat 1", start_time: 0.1, end_time: 3.1, timing_type: "aligned" },
+        { visual_intent: "establishing", id: "b1", order: 1, narration_text: "Narrate beat 1", start_time: 0.1, end_time: 3.1, timing_type: "aligned" },
       ],
     },
   ];
@@ -607,14 +629,15 @@ test("14. Stage 3.5.5.4 (Req 3): Render execution timing takes precedence when v
 test("15. Stage 3.5.5.4 (Req 4): Scene-level fallback remains a parent-scene status", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Scene 1",
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 3.0,
       visual_beats: [
-        { id: "b1_1", order: 1, narration_text: "Beat 1" },
-        { id: "b1_2", order: 2, narration_text: "Beat 2" },
+        { visual_intent: "establishing", id: "b1_1", order: 1, narration_text: "Beat 1" },
+        { visual_intent: "establishing", id: "b1_2", order: 2, narration_text: "Beat 2" },
       ],
     },
   ];
@@ -653,7 +676,8 @@ test("16. Stage 3.5.5.4 (Req 5): Missing telemetry remains unavailable", () => {
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 3.0,
-      visual_beats: [{ id: "b1", order: 1, narration_text: "Beat 1" }],
+      visual_intent: "establishing",
+      visual_beats: [{ id: "b1", order: 1, visual_intent: "establishing", narration_text: "Beat 1" }],
     },
   ];
 
@@ -676,13 +700,14 @@ test("16. Stage 3.5.5.4 (Req 5): Missing telemetry remains unavailable", () => {
 test("17. Stage 3.5.5.4 (Req 6): Stale render data is not presented as current execution", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Revised narration",
       image_prompt: "P1",
       shot_type: "wide",
       est_seconds: 3.0,
       visual_beats: [
-        { id: "b1", order: 1, narration_text: "Revised beat", start_time: 0.0, end_time: 3.0, timing_type: "estimated" },
+        { visual_intent: "establishing", id: "b1", order: 1, narration_text: "Revised beat", start_time: 0.0, end_time: 3.0, timing_type: "estimated" },
       ],
     },
   ];
@@ -711,6 +736,7 @@ test("17. Stage 3.5.5.4 (Req 6): Stale render data is not presented as current e
 test("18. Stage 3.5.5.4 (Req 7): Legacy scenes without visual beats still render correctly", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Legacy scene 1",
       image_prompt: "Prompt 1",
@@ -721,6 +747,7 @@ test("18. Stage 3.5.5.4 (Req 7): Legacy scenes without visual beats still render
       // No visual_beats property
     },
     {
+      visual_intent: "establishing",
       index: 2,
       narration: "Legacy scene 2",
       image_prompt: "Prompt 2",
@@ -753,6 +780,7 @@ test("18. Stage 3.5.5.4 (Req 7): Legacy scenes without visual beats still render
 
   // Un-timed legacy scene without continuous timestamps does not crash or fabricate timestamps
   const untimedScene: StoryboardScene = {
+    visual_intent: "establishing",
     index: 3,
     narration: "Untimed scene",
     image_prompt: "Prompt 3",
@@ -768,6 +796,7 @@ test("18. Stage 3.5.5.4 (Req 7): Legacy scenes without visual beats still render
 test("19. Stage 3.5.5.4 (Req 8): Editing storyboard content does not remove beat metadata", () => {
   const scenes: StoryboardScene[] = [
     {
+      visual_intent: "establishing",
       index: 1,
       narration: "Original narration",
       image_prompt: "Original prompt",
@@ -775,6 +804,7 @@ test("19. Stage 3.5.5.4 (Req 8): Editing storyboard content does not remove beat
       est_seconds: 4.0,
       visual_beats: [
         {
+          visual_intent: "establishing",
           id: "beat_1",
           order: 1,
           narration_text: "Beat text",
@@ -829,14 +859,15 @@ test("20. Stage 3.5.5.4 (Req 9): Render view handles missing storyboard or voice
 
 test("21. Stage 3.5.5.4 (Req 10): Timeline updates when upstream data changes", () => {
   const scene: StoryboardScene = {
+    visual_intent: "establishing",
     index: 1,
     narration: "A quick mystery.",
     image_prompt: "Old prompt",
     shot_type: "wide",
     est_seconds: 5.0,
     visual_beats: [
-      { id: "b1", order: 1, narration_text: "A quick", timing_type: "unassigned" },
-      { id: "b2", order: 2, narration_text: "mystery.", timing_type: "unassigned" },
+      { visual_intent: "establishing", id: "b1", order: 1, narration_text: "A quick", timing_type: "unassigned" },
+      { visual_intent: "establishing", id: "b2", order: 2, narration_text: "mystery.", timing_type: "unassigned" },
     ],
   };
 
@@ -857,8 +888,8 @@ test("21. Stage 3.5.5.4 (Req 10): Timeline updates when upstream data changes", 
         reused: false,
         duration_seconds: 5.0,
         visual_beats: [
-          { id: "b1", order: 1, narration_text: "A quick", start_time: 0.0, end_time: 2.2, timing_type: "aligned" },
-          { id: "b2", order: 2, narration_text: "mystery.", start_time: 2.2, end_time: 5.0, timing_type: "aligned" },
+          { visual_intent: "establishing", id: "b1", order: 1, narration_text: "A quick", start_time: 0.0, end_time: 2.2, timing_type: "aligned" },
+          { visual_intent: "establishing", id: "b2", order: 2, narration_text: "mystery.", start_time: 2.2, end_time: 5.0, timing_type: "aligned" },
         ],
       },
     ],
@@ -879,8 +910,8 @@ test("21. Stage 3.5.5.4 (Req 10): Timeline updates when upstream data changes", 
         reused: false,
         duration_seconds: 5.0,
         visual_beats: [
-          { id: "b1", order: 1, narration_text: "A quick", start_time: 0.0, end_time: 2.2, timing_type: "aligned" },
-          { id: "b2", order: 2, narration_text: "mystery.", start_time: 2.2, end_time: 5.0, timing_type: "aligned" },
+          { visual_intent: "establishing", id: "b1", order: 1, narration_text: "A quick", start_time: 0.0, end_time: 2.2, timing_type: "aligned" },
+          { visual_intent: "establishing", id: "b2", order: 2, narration_text: "mystery.", start_time: 2.2, end_time: 5.0, timing_type: "aligned" },
         ],
       },
     ],

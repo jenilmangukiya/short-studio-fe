@@ -208,11 +208,45 @@ export type BeatTimingType =
   | "fallback"
   | string;
 
+export const ALLOWED_VISUAL_INTENTS = [
+  "establishing",
+  "action_event",
+  "environmental_context",
+  "mechanism_explanation",
+  "human_experience",
+  "detail_focus",
+  "abstract_visualization",
+  "narrative_resolution",
+] as const;
+
+export type VisualIntent = (typeof ALLOWED_VISUAL_INTENTS)[number];
+
+export const VISUAL_INTENT_LABELS: Record<VisualIntent, string> = {
+  establishing: "Establishing",
+  action_event: "Action Event",
+  environmental_context: "Environmental Context",
+  mechanism_explanation: "Mechanism Explanation",
+  human_experience: "Human Experience",
+  detail_focus: "Detail Focus",
+  abstract_visualization: "Abstract Visualization",
+  narrative_resolution: "Narrative Resolution",
+};
+
+export function isValidVisualIntent(val: unknown): val is VisualIntent {
+  return typeof val === "string" && (ALLOWED_VISUAL_INTENTS as readonly string[]).includes(val);
+}
+
+export function getVisualIntentLabel(intent: VisualIntent | string | null | undefined): string {
+  if (!intent) return "";
+  return VISUAL_INTENT_LABELS[intent as VisualIntent] || String(intent).replace(/_/g, " ");
+}
+
 export interface VisualBeat {
   id: string;
   scene_id?: string;
   order: number;
   narration_text: string;
+  visual_intent: VisualIntent;
   start_time?: number | null;
   end_time?: number | null;
   duration_seconds?: number | null;
@@ -236,6 +270,7 @@ export interface StoryboardScene {
   image_prompt: string;
   shot_type: string;
   est_seconds: number;
+  visual_intent: VisualIntent;
   visual_purpose?: string;
   camera_angle?: string;
   focal_point?: string;
@@ -582,8 +617,22 @@ export interface EmotionalBeat {
   visual_intent: string;
 }
 
+export type HumanPresence = "none" | "contextual" | "single" | "ensemble";
+
+export const HUMAN_PRESENCE_LABELS: Record<HumanPresence, string> = {
+  none: "No Humans",
+  contextual: "Contextual Humans",
+  single: "Single Protagonist",
+  ensemble: "Recurring Ensemble",
+};
+
+export function getHumanPresenceLabel(presence: HumanPresence | string | null | undefined): string {
+  if (!presence) return "No Humans";
+  return HUMAN_PRESENCE_LABELS[presence as HumanPresence] || String(presence);
+}
+
 export interface ProtagonistConfig {
-  character_count: "none" | "single" | "ensemble";
+  human_presence: HumanPresence;
   archetype_summary?: string | null;
 }
 
@@ -598,6 +647,13 @@ export interface CreativeDirectionOutput {
   creative_constraints?: string[];
 }
 
+export interface CreativeDirectionStepOutput {
+  creative_direction?: CreativeDirectionOutput;
+  warnings?: string[];
+  meta?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface CharacterEntity {
   id: string;
   name: string;
@@ -607,6 +663,26 @@ export interface CharacterEntity {
   forbidden_mutations?: string[];
 }
 
+export type EnvironmentType =
+  | "exterior"
+  | "interior"
+  | "atmospheric"
+  | "macro_surface"
+  | "conceptual_void";
+
+export const ENVIRONMENT_TYPE_LABELS: Record<EnvironmentType, string> = {
+  exterior: "Exterior",
+  interior: "Interior",
+  atmospheric: "Atmospheric",
+  macro_surface: "Macro Surface",
+  conceptual_void: "Conceptual Void",
+};
+
+export function getEnvironmentTypeLabel(type: EnvironmentType | string | null | undefined): string {
+  if (!type) return "Exterior";
+  return ENVIRONMENT_TYPE_LABELS[type as EnvironmentType] || String(type).replace(/_/g, " ");
+}
+
 export interface EnvironmentEntity {
   id: string;
   name: string;
@@ -614,6 +690,7 @@ export interface EnvironmentEntity {
   lighting_setup: string;
   persistent_props?: string[];
   time_of_day?: string;
+  environment_type?: EnvironmentType;
 }
 
 export interface ObjectEntity {
@@ -643,6 +720,10 @@ export interface ArtDirection {
   rendering_engine_flavor?: string;
   primary_palette_hex?: string[];
   negative_prompt_tokens?: string;
+  visual_genre?: string;
+  lighting_philosophy?: string;
+  rendering_texture?: string;
+  negative_anchors?: string[];
 }
 
 export interface CinematographyProfile {
@@ -684,10 +765,19 @@ export interface VideoBibleOutput {
   subtitle_direction?: SubtitleProfile;
 }
 
+export interface VideoBibleStepOutput {
+  video_bible?: VideoBibleOutput;
+  warnings?: string[];
+  meta?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export interface EntityBindings {
   character_id?: string | null;
-  environment_id: string;
+  secondary_character_ids?: string[];
+  environment_id?: string | null;
   object_ids?: string[];
+  machine_ids?: string[];
   concept_id?: string | null;
 }
 
@@ -716,6 +806,7 @@ export interface StoryboardBeat {
   order: number;
   narration_slice: string;
   duration_est_seconds: number;
+  visual_intent: VisualIntent;
   entity_bindings: EntityBindings;
   transition_from_previous?: "establishing" | "same_scene_reframe" | "action_reaction" | "spatial_cutaway" | "location_change" | "explanatory_cutaway" | "surreal_metaphor" | "resolution_return";
   continuity_intent?: string;
@@ -723,5 +814,6 @@ export interface StoryboardBeat {
   character_state?: CharacterState | null;
   environment_state_override?: string | null;
   foley_cues?: FoleyCue[];
+  final_prompt?: string | null;
 }
 

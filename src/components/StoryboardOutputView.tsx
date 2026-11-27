@@ -7,6 +7,7 @@ import type {
   StoryboardScene,
   VoiceoverItem,
 } from "@/lib/types";
+import { getVisualIntentLabel } from "@/lib/types";
 import {
   correlateBeatsWithTelemetry,
   hasVisualBeats,
@@ -388,6 +389,22 @@ export function StoryboardOutputView({
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
                     {scene.shot_type}
                   </span>
+                  {scene.visual_intent && (
+                    <span
+                      className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200"
+                      title={`Visual Intent: ${getVisualIntentLabel(scene.visual_intent)}`}
+                    >
+                      {getVisualIntentLabel(scene.visual_intent)}
+                    </span>
+                  )}
+                  {scene.environment && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-600 border border-slate-200"
+                      title={`Environment: ${scene.environment}`}
+                    >
+                      <span className="text-slate-400">Env:</span> {scene.environment}
+                    </span>
+                  )}
                   <span className="text-xs text-slate-500 font-medium">
                     ~{scene.est_seconds.toFixed(1)}s
                   </span>

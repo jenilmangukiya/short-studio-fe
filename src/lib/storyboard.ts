@@ -8,8 +8,10 @@ import type {
   StoryboardScene,
   StoryboardStyleSource,
   VisualBeat,
+  VisualIntent,
   VoiceoverItem,
 } from "./types";
+import { isValidVisualIntent } from "./types.ts";
 
 export type ValidatedScene = StoryboardScene;
 
@@ -31,6 +33,7 @@ const KNOWN_BEAT_KEYS = new Set([
   "scene_id",
   "order",
   "narration_text",
+  "visual_intent",
   "start_time",
   "end_time",
   "duration_seconds",
@@ -52,7 +55,11 @@ const KNOWN_BEAT_KEYS = new Set([
  * Preserves all known and unknown properties while safeguarding against malformed values.
  * Returns null if the item is not a valid object.
  */
-export function parseVisualBeat(raw: unknown, defaultOrder: number = 1): VisualBeat | null {
+export function parseVisualBeat(
+  raw: unknown,
+  defaultOrder: number = 1,
+  defaultVisualIntent: VisualIntent = "environmental_context"
+): VisualBeat | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return null;
   }
@@ -82,6 +89,9 @@ export function parseVisualBeat(raw: unknown, defaultOrder: number = 1): VisualB
       : undefined;
 
   const narration_text = typeof b.narration_text === "string" ? b.narration_text : "";
+  const rawIntent = typeof b.visual_intent === "string" ? b.visual_intent : undefined;
+  const visual_intent: VisualIntent =
+    rawIntent && isValidVisualIntent(rawIntent) ? rawIntent : defaultVisualIntent;
   const visual_description = typeof b.visual_description === "string" ? b.visual_description : "";
 
   const start_time =
@@ -136,6 +146,7 @@ export function parseVisualBeat(raw: unknown, defaultOrder: number = 1): VisualB
     ...(scene_id !== undefined && { scene_id }),
     order,
     narration_text,
+    visual_intent,
     visual_description,
     ...(start_time !== undefined && { start_time }),
     ...(end_time !== undefined && { end_time }),
@@ -157,14 +168,17 @@ export function parseVisualBeat(raw: unknown, defaultOrder: number = 1): VisualB
  * Parses an array of raw visual beats, filtering out malformed non-object entries.
  * Returns undefined if rawBeats is null/undefined or not an array.
  */
-export function parseVisualBeats(rawBeats: unknown): VisualBeat[] | undefined {
+export function parseVisualBeats(
+  rawBeats: unknown,
+  defaultVisualIntent: VisualIntent = "environmental_context"
+): VisualBeat[] | undefined {
   if (!Array.isArray(rawBeats)) {
     return undefined;
   }
 
   const validBeats: VisualBeat[] = [];
   for (let i = 0; i < rawBeats.length; i++) {
-    const parsed = parseVisualBeat(rawBeats[i], i + 1);
+    const parsed = parseVisualBeat(rawBeats[i], i + 1, defaultVisualIntent);
     if (parsed) {
       validBeats.push(parsed);
     }
@@ -204,6 +218,9 @@ export function parseAndValidateStoryboard(output: unknown): ValidatedStoryboard
     const narration = typeof item.narration === "string" ? item.narration : null;
     const image_prompt = typeof item.image_prompt === "string" ? item.image_prompt : null;
     const shot_type = typeof item.shot_type === "string" ? item.shot_type : null;
+    const rawIntent = typeof item.visual_intent === "string" ? item.visual_intent : undefined;
+    const visual_intent: VisualIntent =
+      rawIntent && isValidVisualIntent(rawIntent) ? rawIntent : "environmental_context";
 
     const estSec =
       typeof item.est_seconds === "number" && Number.isFinite(item.est_seconds) && item.est_seconds >= 0
@@ -231,6 +248,7 @@ export function parseAndValidateStoryboard(output: unknown): ValidatedStoryboard
         key !== "image_prompt" &&
         key !== "shot_type" &&
         key !== "est_seconds" &&
+        key !== "visual_intent" &&
         key !== "visual_beats"
       ) {
         extraFields[key] = val;
@@ -244,9 +262,10 @@ export function parseAndValidateStoryboard(output: unknown): ValidatedStoryboard
       image_prompt,
       shot_type,
       est_seconds: estSec,
+      visual_intent,
     };
 
-    const parsedBeats = parseVisualBeats(item.visual_beats);
+    const parsedBeats = parseVisualBeats(item.visual_beats, visual_intent);
     if (parsedBeats !== undefined) {
       scene.visual_beats = parsedBeats;
     }
@@ -331,6 +350,7 @@ export function updateSceneInList(
     narration?: string;
     image_prompt?: string;
     shot_type?: string;
+    visual_intent?: VisualIntent;
   }
 ): StoryboardScene[] {
   return scenes.map((s) => {
@@ -341,6 +361,9 @@ export function updateSceneInList(
         ...(updates.image_prompt !== undefined && { image_prompt: updates.image_prompt.trim() }),
         ...(updates.shot_type !== undefined && {
           shot_type: updates.shot_type.trim() || s.shot_type,
+        }),
+        ...(updates.visual_intent !== undefined && {
+          visual_intent: updates.visual_intent,
         }),
       };
     }
