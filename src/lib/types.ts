@@ -183,9 +183,19 @@ export interface ScriptContent {
   title?: string;
   hook?: string;
   narration?: string;
-  angle?: string;
   claims_to_verify?: string[];
-  hashtags?: string[];
+}
+
+export interface ScriptAttemptDiagnostic {
+  attempt: number;
+  script: ScriptContent;
+  triggering_reasons: string[];
+  provider?: string;
+  model?: string;
+  input_tokens?: number;
+  output_tokens?: number;
+  reasoning_tokens?: number;
+  latency_seconds?: number;
 }
 
 export interface ScriptMeta {
@@ -198,7 +208,12 @@ export interface ScriptMeta {
   reasoning_tokens?: number;
   latency_seconds?: number;
   attempts?: number;
+  attempts_history?: ScriptAttemptDiagnostic[];
   revision?: boolean | null;
+  target_duration_seconds?: [number, number] | number[];
+  target_word_count_range?: [number, number] | number[];
+  estimated_duration_seconds?: number;
+  [key: string]: unknown;
 }
 
 export interface ScriptStepOutput {
@@ -689,12 +704,6 @@ export interface ApiErrorResponse {
 // Creative Direction & Video Director Types (Phase 1)
 // ============================================================================
 
-export interface EmotionalBeat {
-  phase: "hook" | "setup" | "complication" | "reveal" | "resolution";
-  target_emotion: string;
-  visual_intent: string;
-}
-
 export type HumanPresence = "none" | "contextual" | "single" | "ensemble";
 
 export const HUMAN_PRESENCE_LABELS: Record<HumanPresence, string> = {
@@ -746,7 +755,6 @@ export interface CreativeDirectionOutput {
   central_thesis: string;
   tone: string;
   protagonist_config: ProtagonistConfig;
-  emotional_progression?: EmotionalBeat[];
   creative_constraints?: string[];
   recommended_duration_seconds?: number;
   resolved_target_duration?: number;

@@ -258,37 +258,6 @@ export function CreativeDirectionOutputView({
           )}
         </div>
 
-        {/* Emotional Progression Arc */}
-        {cd.emotional_progression && cd.emotional_progression.length > 0 && (
-          <div className="pt-2 border-t border-slate-100">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-              Emotional Progression Arc ({cd.emotional_progression.length} Beats)
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-2">
-              {cd.emotional_progression.map((beat, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-lg bg-slate-50 border border-slate-200/70 p-2 text-xs space-y-1"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
-                      #{idx + 1} {beat.phase}
-                    </span>
-                  </div>
-                  <p className="font-semibold text-slate-800 text-[11px] truncate" title={beat.target_emotion}>
-                    {beat.target_emotion}
-                  </p>
-                  {beat.visual_intent && (
-                    <p className="text-[10px] text-slate-500 leading-tight line-clamp-2" title={beat.visual_intent}>
-                      {beat.visual_intent}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Storytelling Narrative Plan & Ordered Stages */}
         {narrativePlan && (
           <div className="pt-3 border-t border-slate-100 space-y-3">
@@ -458,7 +427,7 @@ export function CreativeDirectionOutputView({
         )}
 
         {/* Creative Constraints */}
-        {cd.creative_constraints && cd.creative_constraints.length > 0 && (
+        {Array.isArray(cd.creative_constraints) && cd.creative_constraints.length > 0 && (
           <div className="pt-2 border-t border-slate-100">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
               Creative Constraints ({cd.creative_constraints.length})

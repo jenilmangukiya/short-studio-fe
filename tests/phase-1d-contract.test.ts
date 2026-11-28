@@ -9,6 +9,9 @@ import {
   type CreativeDirectionOutput,
   type NarrativePlan,
   type NarrativeStage,
+  type ScriptAttemptDiagnostic,
+  type ScriptContent,
+  type ScriptMeta,
   type VideoCreate,
   type VideoDetail,
   type VideoDurationMode,
@@ -405,4 +408,158 @@ test("Phase 1D — VideoSummary and VideoDetail types preserve duration_mode and
   assert.equal(detail.duration_mode, "manual");
   assert.equal(detail.target_duration, 60);
   assert.equal(detail.visual_style_snapshot?.id, "stickman_tactical_explainer");
+});
+
+// ============================================================================
+// 6. Phase 1D.7 Schema Simplification & Diagnostic Metadata Isolation
+// ============================================================================
+
+test("Phase 1D.7 — Creative Direction removes emotional_progression and supports empty creative_constraints", () => {
+  const cd: CreativeDirectionOutput = {
+    format_archetype: "cause_and_effect",
+    storytelling_angle: "The cascade of events behind the 1977 New York blackout",
+    central_thesis: "Lightning strikes combined with cascading relay trip failures darkened NYC",
+    tone: "tense and analytical",
+    protagonist_config: {
+      human_presence: "contextual",
+      archetype_summary: "Con Edison grid operators",
+    },
+    creative_constraints: [], // Empty array supported
+    recommended_duration_seconds: 60,
+    resolved_target_duration: 60,
+    duration_rationale: "Requires pacing through 3 distinct substation relay failures before blackout.",
+    narrative_plan: {
+      narrative_perspective: "experiential_witness",
+      opening_situation: "On July 13, 1977, lightning struck a Buchanan substation.",
+      information_revelation_strategy: "progressive_reveal",
+      story_progression: [
+        { stage_name: "The Strike", description: "Lightning severs 345kV lines." },
+        { stage_name: "The Cascade", description: "Feeder lines trip one by one." },
+        { stage_name: "The Darkness", description: "Entire city plunges into darkness." },
+      ],
+      audience_takeaway: "Grid resilience hinges on human decision buffers under automated cascade failure.",
+      resolution_payoff: "A concrete historical payoff explaining why modern grids isolate automatically.",
+    },
+  };
+
+  assert.equal(cd.format_archetype, "cause_and_effect");
+  assert.equal(cd.storytelling_angle, "The cascade of events behind the 1977 New York blackout");
+  assert.equal(cd.central_thesis.includes("cascading relay"), true);
+  assert.equal(cd.tone, "tense and analytical");
+  assert.equal(cd.protagonist_config.human_presence, "contextual");
+  assert.deepEqual(cd.creative_constraints, []);
+  assert.equal(cd.recommended_duration_seconds, 60);
+  assert.equal(cd.resolved_target_duration, 60);
+  assert.equal(cd.duration_rationale?.includes("substation relay"), true);
+
+  // Runtime and structural check: emotional_progression must NOT exist
+  const cdRecord = cd as unknown as Record<string, unknown>;
+  assert.equal("emotional_progression" in cdRecord, false);
+  assert.equal(cdRecord.emotional_progression, undefined);
+
+  // Verify the 6 canonical narrative_plan fields
+  assert.ok(cd.narrative_plan);
+  assert.equal(cd.narrative_plan.narrative_perspective, "experiential_witness");
+  assert.equal(cd.narrative_plan.opening_situation?.includes("July 13, 1977"), true);
+  assert.equal(cd.narrative_plan.information_revelation_strategy, "progressive_reveal");
+  assert.equal(cd.narrative_plan.story_progression?.length, 3);
+  assert.equal(cd.narrative_plan.audience_takeaway?.includes("Grid resilience"), true);
+  assert.equal(cd.narrative_plan.resolution_payoff?.includes("historical payoff"), true);
+});
+
+test("Phase 1D.7 — Script removes angle and hashtags, supports optional claims_to_verify", () => {
+  // Script with optional claims_to_verify populated
+  const scriptWithClaims: ScriptContent = {
+    title: "The 1977 New York City Blackout",
+    hook: "At 8:37 PM, a single lightning bolt struck a power line north of New York City.",
+    narration: "At 8:37 PM, a single lightning bolt struck a power line north of New York City. Over the next hour, a catastrophic cascade of relay failures plunged nine million people into pitch darkness.",
+    claims_to_verify: [
+      "Lightning struck Buchanan substation at 8:37 PM",
+      "Nine million people were affected by the outage",
+    ],
+  };
+
+  assert.equal(scriptWithClaims.title, "The 1977 New York City Blackout");
+  assert.equal(scriptWithClaims.hook?.startsWith("At 8:37 PM"), true);
+  assert.equal(scriptWithClaims.narration?.startsWith(scriptWithClaims.hook || ""), true);
+  assert.equal(scriptWithClaims.claims_to_verify?.length, 2);
+
+  // Runtime check: angle and hashtags must NOT exist in ScriptContent
+  const scriptRecord = scriptWithClaims as unknown as Record<string, unknown>;
+  assert.equal("angle" in scriptRecord, false);
+  assert.equal(scriptRecord.angle, undefined);
+  assert.equal("hashtags" in scriptRecord, false);
+  assert.equal(scriptRecord.hashtags, undefined);
+
+  // Script with empty claims_to_verify array
+  const scriptEmptyClaims: ScriptContent = {
+    title: "Why Ice Floats",
+    hook: "Have you ever wondered why ice floats instead of sinking?",
+    narration: "Have you ever wondered why ice floats instead of sinking? Water expands as it freezes into a crystalline lattice.",
+    claims_to_verify: [],
+  };
+  assert.deepEqual(scriptEmptyClaims.claims_to_verify, []);
+
+  // Script with omitted claims_to_verify
+  const scriptNoClaims: ScriptContent = {
+    title: "Why Ice Floats",
+    hook: "Have you ever wondered why ice floats instead of sinking?",
+    narration: "Have you ever wondered why ice floats instead of sinking? Water expands as it freezes into a crystalline lattice.",
+  };
+  assert.equal(scriptNoClaims.claims_to_verify, undefined);
+});
+
+test("Phase 1D.7 — Diagnostic metadata isolates attempts_history from authoritative script narration", () => {
+  const rejectedDraft: ScriptAttemptDiagnostic = {
+    attempt: 1,
+    script: {
+      title: "Broken Draft",
+      hook: "Hey guys check this out!",
+      narration: "Hey guys check this out! Today we are gonna talk about the blackout [insert camera cut here]...",
+    },
+    triggering_reasons: [
+      "Bracketed production notes detected: '[insert camera cut here]'",
+      "Meta-cliché opening hook: 'Hey guys check this out!'",
+    ],
+    provider: "google",
+    model: "gemini-2.5-flash",
+    input_tokens: 420,
+    output_tokens: 95,
+    latency_seconds: 1.12,
+  };
+
+  const authoritativeScript: ScriptContent = {
+    title: "The 1977 New York City Blackout",
+    hook: "At 8:37 PM, a single lightning bolt struck a power line north of New York City.",
+    narration: "At 8:37 PM, a single lightning bolt struck a power line north of New York City. A cascade of relay failures plunged nine million people into pitch darkness.",
+    claims_to_verify: ["Outage began at 8:37 PM"],
+  };
+
+  const scriptMeta: ScriptMeta = {
+    prompt_version: "script-v1:a1b2c3d4",
+    provider: "google",
+    model: "gemini-2.5-flash",
+    attempts: 2,
+    attempts_history: [rejectedDraft],
+    estimated_duration_seconds: 42.5,
+  };
+
+  const stepOutput = {
+    script: authoritativeScript,
+    meta: scriptMeta,
+    warnings: [],
+  };
+
+  // Authoritative extraction logic: must extract stepOutput.script, NOT attempts_history
+  const resolvedScript = stepOutput.script || (("narration" in stepOutput) ? stepOutput : {});
+  assert.equal(resolvedScript.title, "The 1977 New York City Blackout");
+  assert.equal(resolvedScript.hook?.startsWith("At 8:37 PM"), true);
+  assert.equal(resolvedScript.narration?.includes("[insert camera cut here]"), false);
+
+  // Diagnostic metadata is preserved for auditing but isolated
+  assert.equal(stepOutput.meta.attempts, 2);
+  assert.equal(stepOutput.meta.attempts_history?.length, 1);
+  assert.equal(stepOutput.meta.attempts_history[0].attempt, 1);
+  assert.equal(stepOutput.meta.attempts_history[0].triggering_reasons.length, 2);
+  assert.equal(stepOutput.meta.attempts_history[0].script.title, "Broken Draft");
 });

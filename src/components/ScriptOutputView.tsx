@@ -25,13 +25,16 @@ export function ScriptOutputView({ output, onSave, isSaving }: ScriptOutputViewP
   }
 
   const typedOutput = output as ScriptStepOutput;
-  // Handle both standard nested { script: { ... } } and potential flat shapes { title, hook, ... }
-  const script = typedOutput.script || (typedOutput as Record<string, unknown>);
+  // Handle standard nested { script: { ... } } or flat shape { title, hook, narration }
+  // Never treat diagnostic metadata (e.g. attempts_history) as authoritative narration
+  const script =
+    typedOutput.script ||
+    ("narration" in typedOutput || "hook" in typedOutput || "title" in typedOutput
+      ? (typedOutput as Record<string, unknown>)
+      : {});
   const title = typeof script.title === "string" ? script.title : "";
   const hook = typeof script.hook === "string" ? script.hook : "";
   const narration = typeof script.narration === "string" ? script.narration : "";
-  const angle = typeof script.angle === "string" ? script.angle : null;
-  const hashtags = Array.isArray(script.hashtags) ? (script.hashtags as string[]) : [];
   const claims = Array.isArray(script.claims_to_verify) ? (script.claims_to_verify as string[]) : [];
   const warnings = Array.isArray(typedOutput.warnings) ? (typedOutput.warnings as string[]) : [];
   const meta = typedOutput.meta;
@@ -99,17 +102,9 @@ export function ScriptOutputView({ output, onSave, isSaving }: ScriptOutputViewP
         {/* View Mode */}
         {!isEditing ? (
           <>
-            {/* Title & Angle */}
+            {/* Title */}
             <div>
               {title && <h3 className="text-base font-bold text-slate-900">{title}</h3>}
-              {angle && (
-                <p className="text-xs text-indigo-700 font-medium mt-1">
-                  <span className="font-semibold text-slate-500 uppercase tracking-wider text-[10px]">
-                    Angle:{" "}
-                  </span>
-                  {angle}
-                </p>
-              )}
             </div>
 
             {/* Hook */}
@@ -208,25 +203,6 @@ export function ScriptOutputView({ output, onSave, isSaving }: ScriptOutputViewP
               >
                 {isSaving ? "Saving Revision..." : "Save Revision"}
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Hashtags */}
-        {hashtags.length > 0 && !isEditing && (
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
-              Hashtags
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {hashtags.map((tag, idx) => (
-                <span
-                  key={idx}
-                  className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200"
-                >
-                  {tag.startsWith("#") ? tag : `#${tag}`}
-                </span>
-              ))}
             </div>
           </div>
         )}

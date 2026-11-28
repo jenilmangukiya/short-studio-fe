@@ -76,6 +76,45 @@ The video detail page header features a four-tier duration lifecycle indicator:
 
 ---
 
+## Phase 1D.7: Schema Simplification & Frontend Synchronization
+
+### 1. Creative Direction Simplification (`src/lib/types.ts`, `src/components/CreativeDirectionOutputView.tsx`)
+
+- **Removal of `emotional_progression`**:
+  - Completely removed `emotional_progression` field and obsolete `EmotionalBeat` type.
+  - Removed all emotional progression timeline badges, beat phase indicators, and graphs from the UI.
+- **Support for Empty `creative_constraints`**:
+  - `creative_constraints` explicitly supports empty arrays (`[]`) without rendering empty boxes or throwing errors.
+- **Six Canonical `narrative_plan` Fields**:
+  - `narrative_perspective`: Vantage point / storyteller perspective.
+  - `opening_situation`: Concrete curiosity hook or cold open situation.
+  - `information_revelation_strategy`: Strategy for information reveal across the short.
+  - `story_progression`: Ordered list of `NarrativeStage` beats (`stage_name`, `description`).
+  - `audience_takeaway`: Intended emotional or intellectual takeaway.
+  - `resolution_payoff`: Natural payoff answering the opening curiosity.
+- **Preserved Direction Fields**:
+  - `format_archetype`, `storytelling_angle`, `central_thesis`, `tone`, and `protagonist_config` (`human_presence`, `archetype_summary`).
+  - `recommended_duration_seconds`, `resolved_target_duration`, and `duration_rationale`.
+
+### 2. Script Schema Simplification (`src/lib/types.ts`, `src/components/ScriptOutputView.tsx`)
+
+- **Removal of `angle`**:
+  - Completely removed `angle` from `ScriptContent` types, component state, parsing, and UI.
+- **Removal of `hashtags`**:
+  - Completely removed `hashtags` from `ScriptContent` types, component state, and UI.
+- **Optional & Empty `claims_to_verify` Support**:
+  - `claims_to_verify` is treated as an optional array (`claims_to_verify?: string[]`), cleanly handling empty arrays (`[]`) and omitted values without UI artifacts.
+- **Authoritative Narration Preservation**:
+  - Script view preserves `title`, `hook`, and `narration` with full inline editing capability.
+  - No arbitrary hook length or sentence-length restrictions are imposed in the frontend.
+
+### 3. Diagnostic Metadata Isolation
+
+- Backend `attempts_history` metadata stores rejected generation attempts with triggering technical reasons and telemetry for auditing.
+- Frontend script parsing guarantees that rejected diagnostic drafts in `meta.attempts_history` are strictly isolated and never displayed or edited as authoritative narration.
+
+---
+
 ## Phase 1A–1C Contract Alignment Summary
 
 - **Visual Styles**: Three canonical catalog presets (`legacy_default`, `stickman_tactical_explainer`, `stylized_2d_narrative`). Mandatory selection on video creation. Single source of truth is the frozen snapshot `visual_style_snapshot`.
@@ -89,7 +128,7 @@ The video detail page header features a four-tier duration lifecycle indicator:
 
 ## Testing & Quality Assurance
 
-- **Test Suite**: 232 tests passing across 16 test suites (`npm test`).
+- **Test Suite**: 235 tests passing across 16 test suites (`npm test`).
   - Contract regression tests in `tests/phase-1d-contract.test.ts`.
 - **TypeScript**: Strict type check with `npx tsc --noEmit` (0 errors).
 - **ESLint**: Complete lint check with `npm run lint` (0 errors, 0 warnings).

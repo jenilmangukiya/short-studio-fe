@@ -41,18 +41,6 @@ test("Phase 1C — Creative Direction completely removes visual_genre and uses f
       human_presence: "contextual",
       archetype_summary: "Swimmers and rescue divers",
     },
-    emotional_progression: [
-      {
-        phase: "hook",
-        target_emotion: "curiosity",
-        visual_intent: "establishing",
-      },
-      {
-        phase: "resolution",
-        target_emotion: "relief",
-        visual_intent: "narrative_resolution",
-      },
-    ],
     creative_constraints: ["Zero visible modern diving gear", "No animated text overlays"],
   };
 
