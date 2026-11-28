@@ -40,17 +40,29 @@ export type ChannelUpdate = components["schemas"]["ChannelUpdate"] & {
   default_visual_style_id?: VisualStyleId | null;
 };
 
+export type VideoDurationMode = "auto" | "manual";
+
+export const MIN_VIDEO_DURATION_SECONDS = 30;
+export const MAX_VIDEO_DURATION_SECONDS = 180;
+export const DURATION_PRESETS = [30, 45, 60, 90, 120, 180] as const;
+
 export type VideoSummary = components["schemas"]["VideoSummary"] & {
   visual_style_id?: VisualStyleId | null;
   visual_style_version?: number | null;
+  duration_mode?: VideoDurationMode;
+  target_duration?: number | null;
 };
 export type VideoDetail = components["schemas"]["VideoDetail"] & {
   visual_style_id?: VisualStyleId | null;
   visual_style_version?: number | null;
   visual_style_snapshot?: Record<string, unknown> | null;
+  duration_mode?: VideoDurationMode;
+  target_duration?: number | null;
 };
 export type VideoCreate = Omit<components["schemas"]["VideoCreate"], "visual_style_id"> & {
   visual_style_id: VisualStyleId;
+  duration_mode?: VideoDurationMode;
+  target_duration?: number | null;
 };
 
 export type StepOut = components["schemas"]["StepOut"] & {
@@ -702,6 +714,32 @@ export interface ProtagonistConfig {
   archetype_summary?: string | null;
 }
 
+export interface NarrativeStage {
+  stage_name: string;
+  description: string;
+  stage_goal?: string;
+  story_beat_goal?: string;
+  pacing?: string;
+  emotional_target?: string;
+  intellectual_target?: string;
+  target_beat_percentage?: number;
+  percentage_allocation?: number;
+  [key: string]: unknown;
+}
+
+export interface NarrativePlan {
+  narrative_perspective?: string;
+  opening_situation?: string;
+  opening_approach?: string;
+  information_revelation_strategy?: string;
+  story_progression?: NarrativeStage[];
+  stages?: NarrativeStage[];
+  audience_takeaway?: string;
+  resolution_payoff?: string;
+  archetype?: string;
+  [key: string]: unknown;
+}
+
 export interface CreativeDirectionOutput {
   format_archetype: string;
   storytelling_angle: string;
@@ -710,6 +748,27 @@ export interface CreativeDirectionOutput {
   protagonist_config: ProtagonistConfig;
   emotional_progression?: EmotionalBeat[];
   creative_constraints?: string[];
+  recommended_duration_seconds?: number;
+  resolved_target_duration?: number;
+  duration_rationale?: string;
+  narrative_plan?: NarrativePlan | null;
+}
+
+export const FORMAT_ARCHETYPE_LABELS: Record<string, string> = {
+  experiential_history: "Experiential History",
+  mystery_investigation: "Mystery Investigation",
+  character_journey: "Character Journey",
+  everyday_curiosity: "Everyday Curiosity",
+  scientific_discovery: "Scientific Discovery",
+  cause_and_effect: "Cause and Effect",
+  direct_explanation: "Direct Explanation",
+  explainer_myth_bust: "Explainer / Myth Bust",
+  narrative_story: "Narrative Story",
+};
+
+export function getFormatArchetypeLabel(archetype?: string | null): string {
+  if (!archetype) return "";
+  return FORMAT_ARCHETYPE_LABELS[archetype] || archetype.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export interface CreativeDirectionStepOutput {

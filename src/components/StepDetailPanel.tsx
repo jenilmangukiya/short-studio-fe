@@ -34,6 +34,8 @@ interface StepDetailPanelProps {
   videoId: string;
   topic?: string;
   visualStyleSnapshot?: Record<string, unknown> | null;
+  durationMode?: "auto" | "manual";
+  targetDuration?: number | null;
 }
 
 function getBadgeStyle(status: StepStatus | string) {
@@ -65,6 +67,8 @@ export function StepDetailPanel({
   videoId,
   topic,
   visualStyleSnapshot,
+  durationMode,
+  targetDuration,
 }: StepDetailPanelProps) {
   const [isRerunOpen, setIsRerunOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -427,6 +431,8 @@ export function StepDetailPanel({
                       isMock={isMock}
                       isStale={true}
                       visualStyleSnapshot={visualStyleSnapshot}
+                      durationMode={durationMode}
+                      requestedDuration={targetDuration}
                     />
                   ) : isScript ? (
                     <ScriptOutputView output={step.output} />
@@ -514,6 +520,8 @@ export function StepDetailPanel({
                 isMock={isMock}
                 isStale={false}
                 visualStyleSnapshot={visualStyleSnapshot}
+                durationMode={durationMode}
+                requestedDuration={targetDuration}
               />
             ) : isScript ? (
               <ScriptOutputView

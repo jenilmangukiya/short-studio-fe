@@ -6,7 +6,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AuthGuard } from "@/components/AuthGuard";
 import { api, formatErrorMessage } from "@/lib/api";
 import { getChannelVisualStyle } from "@/lib/types";
-import type { VideoCreate, VideoSummary, VisualStyleId } from "@/lib/types";
+import {
+  MIN_VIDEO_DURATION_SECONDS,
+  MAX_VIDEO_DURATION_SECONDS,
+  DURATION_PRESETS,
+  type VideoCreate,
+  type VideoDurationMode,
+  type VideoSummary,
+  type VisualStyleId,
+} from "@/lib/types";
 import {
   computeVideoMetrics,
   filterAndSortVideos,
@@ -56,6 +64,17 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
   const [topic, setTopic] = useState("");
   const [description, setDescription] = useState("");
   const [selectedStyleId, setSelectedStyleId] = useState<VisualStyleId | null>(null);
+  const [durationMode, setDurationMode] = useState<VideoDurationMode>("auto");
+  const [targetDuration, setTargetDuration] = useState<number>(60);
+
+  const resetCreateForm = () => {
+    setTopic("");
+    setDescription("");
+    setSelectedStyleId(null);
+    setDurationMode("auto");
+    setTargetDuration(60);
+    setFormError(null);
+  };
 
   // Delete Video modal state
   const [videoToDelete, setVideoToDelete] = useState<VideoSummary | null>(null);
@@ -112,10 +131,7 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["channel", channelId, "videos"] });
       setIsModalOpen(false);
-      setTopic("");
-      setDescription("");
-      setSelectedStyleId(null);
-      setFormError(null);
+      resetCreateForm();
     },
     onError: (err) => {
       setFormError(formatErrorMessage(err));
@@ -151,10 +167,28 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
       return;
     }
 
+    let resolvedTargetDuration: number | null = null;
+    if (durationMode === "manual") {
+      const parsed = Number(targetDuration);
+      if (isNaN(parsed) || !Number.isInteger(parsed)) {
+        setFormError("Custom duration must be a valid integer in seconds.");
+        return;
+      }
+      if (parsed < MIN_VIDEO_DURATION_SECONDS || parsed > MAX_VIDEO_DURATION_SECONDS) {
+        setFormError(
+          `Target duration must be between ${MIN_VIDEO_DURATION_SECONDS} and ${MAX_VIDEO_DURATION_SECONDS} seconds.`
+        );
+        return;
+      }
+      resolvedTargetDuration = parsed;
+    }
+
     createVideoMutation.mutate({
       topic: trimmedTopic,
       description: description.trim() || null,
       visual_style_id: selectedStyleId,
+      duration_mode: durationMode,
+      target_duration: durationMode === "manual" ? resolvedTargetDuration : null,
     });
   };
 
@@ -255,10 +289,7 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
               <button
                 type="button"
                 onClick={() => {
-                  setTopic("");
-                  setDescription("");
-                  setSelectedStyleId(null);
-                  setFormError(null);
+                  resetCreateForm();
                   setIsModalOpen(true);
                 }}
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition shadow-sm cursor-pointer"
@@ -329,10 +360,7 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
               <button
                 type="button"
                 onClick={() => {
-                  setTopic("");
-                  setDescription("");
-                  setSelectedStyleId(null);
-                  setFormError(null);
+                  resetCreateForm();
                   setIsModalOpen(true);
                 }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition shadow-xs cursor-pointer"
@@ -461,8 +489,7 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
                 type="button"
                 onClick={() => {
                   setIsModalOpen(false);
-                  setSelectedStyleId(null);
-                  setFormError(null);
+                  resetCreateForm();
                 }}
                 className="text-slate-400 hover:text-slate-600 text-lg cursor-pointer leading-none p-1"
               >
@@ -514,6 +541,166 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
                 />
               </div>
 
+              {/* Storytelling Duration Target Controls */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-slate-800 uppercase tracking-wider text-[11px] block">
+                      Target Storytelling Duration
+                    </label>
+                    <span className="text-[11px] text-slate-500">
+                      Approximate storytelling target for pacing and script structure (30s – 180s).
+                    </span>
+                  </div>
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                      durationMode === "auto"
+                        ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                        : "bg-purple-50 text-purple-700 border border-purple-200"
+                    }`}
+                  >
+                    {durationMode === "auto" ? "✨ Automatic (AI)" : `⏱ ${targetDuration}s Custom`}
+                  </span>
+                </div>
+
+                {/* Mode Selector Tabs */}
+                <div className="grid grid-cols-2 gap-2 bg-slate-200/70 p-1 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDurationMode("auto");
+                      if (formError?.includes("duration") || formError?.includes("Duration")) setFormError(null);
+                    }}
+                    disabled={createVideoMutation.isPending}
+                    className={`py-1.5 px-3 rounded-md text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      durationMode === "auto"
+                        ? "bg-white text-indigo-600 shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <span>✨</span>
+                    <span>Automatic (AI Recommended)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDurationMode("manual");
+                      if (formError?.includes("duration") || formError?.includes("Duration")) setFormError(null);
+                    }}
+                    disabled={createVideoMutation.isPending}
+                    className={`py-1.5 px-3 rounded-md text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      durationMode === "manual"
+                        ? "bg-white text-indigo-600 shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <span>⏱</span>
+                    <span>Custom Duration</span>
+                  </button>
+                </div>
+
+                {/* Automatic Mode Description */}
+                {durationMode === "auto" ? (
+                  <div className="rounded-lg bg-white border border-slate-200/80 p-3 text-xs text-slate-600 space-y-1">
+                    <p className="font-medium text-slate-800 text-[11px]">
+                      AI determines the optimal narrative duration based on topic depth and scene pacing.
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Duration ranges dynamically from 30s for punchy single-concept curiosities up to 180s for multi-stage narrative journeys. Duration is an approximate storytelling guidance target, not an exact rendered video length.
+                    </p>
+                  </div>
+                ) : (
+                  /* Custom Duration Mode Controls */
+                  <div className="rounded-lg bg-white border border-slate-200/80 p-3 space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                          Preset Targets
+                        </span>
+                        <span className="text-[11px] font-mono font-semibold text-indigo-600">
+                          {targetDuration}s selected
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {DURATION_PRESETS.map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => {
+                              setTargetDuration(preset);
+                              if (formError?.includes("duration") || formError?.includes("Duration")) setFormError(null);
+                            }}
+                            disabled={createVideoMutation.isPending}
+                            className={`px-3 py-1 rounded-md text-xs font-semibold transition cursor-pointer border ${
+                              targetDuration === preset
+                                ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs"
+                                : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                            }`}
+                          >
+                            {preset}s
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <label
+                          htmlFor="custom-duration-input"
+                          className="text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+                        >
+                          Custom Seconds (30–180s)
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            id="custom-duration-input"
+                            type="number"
+                            min={MIN_VIDEO_DURATION_SECONDS}
+                            max={MAX_VIDEO_DURATION_SECONDS}
+                            step={1}
+                            value={targetDuration}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setTargetDuration(isNaN(val) ? 0 : val);
+                              if (formError?.includes("duration") || formError?.includes("Duration")) setFormError(null);
+                            }}
+                            disabled={createVideoMutation.isPending}
+                            className="w-20 px-2 py-1 text-center font-mono text-xs font-bold rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900"
+                          />
+                          <span className="text-xs text-slate-500">sec</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono text-slate-400">30s</span>
+                        <input
+                          type="range"
+                          min={MIN_VIDEO_DURATION_SECONDS}
+                          max={MAX_VIDEO_DURATION_SECONDS}
+                          step={1}
+                          value={
+                            targetDuration >= MIN_VIDEO_DURATION_SECONDS && targetDuration <= MAX_VIDEO_DURATION_SECONDS
+                              ? targetDuration
+                              : 60
+                          }
+                          onChange={(e) => {
+                            setTargetDuration(parseInt(e.target.value, 10));
+                            if (formError?.includes("duration") || formError?.includes("Duration")) setFormError(null);
+                          }}
+                          disabled={createVideoMutation.isPending}
+                          className="w-full accent-indigo-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg appearance-none"
+                        />
+                        <span className="text-[10px] font-mono text-slate-400">180s</span>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400 leading-relaxed italic">
+                      Target duration guides script pacing and beat allocation. Final generated voiceover and render may vary slightly.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Visual Style Selector */}
               <div className="pt-1">
                 <VisualStyleSelector
@@ -534,8 +721,7 @@ function ChannelVideosContent({ channelId }: { channelId: string }) {
                   type="button"
                   onClick={() => {
                     setIsModalOpen(false);
-                    setSelectedStyleId(null);
-                    setFormError(null);
+                    resetCreateForm();
                   }}
                   className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                 >

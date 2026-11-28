@@ -229,6 +229,52 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
   const styleMeta = getStyleVisualMeta(effectiveStyleId);
   const hasSnapshot = Boolean(video?.visual_style_snapshot);
 
+  // Duration Lifecycle breakdown
+  const cdStep = sortedSteps.find((s) => s.name === "creative_direction");
+  const storyboardStep = sortedSteps.find((s) => s.name === "storyboard");
+  const renderStep = sortedSteps.find((s) => s.name === "render");
+  const voiceoverStep = sortedSteps.find((s) => s.name === "voiceover");
+
+  const requestedMode = video?.duration_mode || "auto";
+  const requestedTargetDuration = video?.target_duration;
+
+  // Resolved Target Duration: only authoritative if CD is done and not stale
+  const isCdAuthoritative = cdStep?.status === "done";
+  const cdOutput = cdStep?.output as Record<string, unknown> | null | undefined;
+  const cdData = (cdOutput?.creative_direction || cdOutput) as Record<string, unknown> | null | undefined;
+  const resolvedTargetDuration =
+    isCdAuthoritative && typeof cdData?.resolved_target_duration === "number"
+      ? (cdData.resolved_target_duration as number)
+      : isCdAuthoritative && typeof cdData?.recommended_duration_seconds === "number"
+      ? (cdData.recommended_duration_seconds as number)
+      : null;
+
+  // Estimated Narration Duration (from Storyboard)
+  const isStoryboardDone = storyboardStep?.status === "done";
+  const sbOutput = storyboardStep?.output as Record<string, unknown> | null | undefined;
+  const sbData = (sbOutput?.storyboard || sbOutput) as Record<string, unknown> | null | undefined;
+  const estimatedNarrationDuration =
+    isStoryboardDone && typeof sbData?.total_seconds === "number"
+      ? (sbData.total_seconds as number)
+      : null;
+
+  // Actual Generated Duration (Render or Voiceover)
+  const isRenderDone = renderStep?.status === "done";
+  const renderOutput = renderStep?.output as Record<string, unknown> | null | undefined;
+  const renderDataObj = (renderOutput?.render || renderOutput) as Record<string, unknown> | null | undefined;
+  const actualRenderDuration =
+    isRenderDone && typeof renderDataObj?.duration_seconds === "number"
+      ? (renderDataObj.duration_seconds as number)
+      : null;
+
+  const isVoiceoverDone = voiceoverStep?.status === "done";
+  const voOutput = voiceoverStep?.output as Record<string, unknown> | null | undefined;
+  const voData = (voOutput?.voiceover || voOutput) as Record<string, unknown> | null | undefined;
+  const actualVoiceoverDuration =
+    isVoiceoverDone && typeof voData?.total_duration_seconds === "number"
+      ? (voData.total_duration_seconds as number)
+      : null;
+
   // Determine label for main pipeline button (Next step, Retry step, or Approve & Next)
   const isNextStepFailed = currentStep?.status === "failed";
   const isNextStepAwaitingApproval = currentStep?.status === "awaiting_approval";
@@ -463,6 +509,96 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                       <span>Change Style</span>
                     </button>
                   </div>
+
+                  {/* Storytelling Duration Lifecycle Ribbon */}
+                  <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <span>⏱</span> Duration:
+                    </span>
+
+                    {/* 1. Requested */}
+                    <span
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200"
+                      title="Requested storytelling target"
+                    >
+                      <span className="text-slate-400 text-[10px] uppercase font-bold">Requested:</span>
+                      <span className="font-semibold">
+                        {requestedMode === "auto"
+                          ? "Auto (AI-determined)"
+                          : `${requestedTargetDuration ?? 60}s (Manual)`}
+                      </span>
+                    </span>
+
+                    {/* Arrow separator */}
+                    <span className="text-slate-300 font-bold">&rarr;</span>
+
+                    {/* 2. Resolved Target */}
+                    {resolvedTargetDuration !== null ? (
+                      <span
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                        title="AI resolved storytelling target based on topic depth and pacing"
+                      >
+                        <span className="text-indigo-400 text-[10px] uppercase font-bold">Target:</span>
+                        <span className="font-mono">{resolvedTargetDuration}s</span>
+                      </span>
+                    ) : (
+                      <span
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-50 text-slate-400 border border-slate-200 border-dashed"
+                        title={
+                          cdStep?.status === "stale"
+                            ? "Creative Direction output is stale and awaiting rerun"
+                            : cdStep?.status === "running"
+                            ? "Resolving storytelling target in Creative Direction..."
+                            : "Target will be resolved once Creative Direction runs"
+                        }
+                      >
+                        <span className="text-[10px] uppercase">Target:</span>
+                        <span>
+                          {cdStep?.status === "stale"
+                            ? "Pending Rerun"
+                            : cdStep?.status === "running"
+                            ? "Resolving..."
+                            : "Awaiting CD"}
+                        </span>
+                      </span>
+                    )}
+
+                    {/* 3. Estimated Narration (if available) */}
+                    {estimatedNarrationDuration !== null && (
+                      <>
+                        <span className="text-slate-300 font-bold">&rarr;</span>
+                        <span
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200"
+                          title="Estimated narration duration from Storyboard scene timings"
+                        >
+                          <span className="text-purple-400 text-[10px] uppercase font-bold">Est Script:</span>
+                          <span className="font-mono">{Math.round(estimatedNarrationDuration)}s</span>
+                        </span>
+                      </>
+                    )}
+
+                    {/* 4. Actual Final Render or Voiceover */}
+                    {(actualRenderDuration !== null || actualVoiceoverDuration !== null) && (
+                      <>
+                        <span className="text-slate-300 font-bold">&rarr;</span>
+                        <span
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs"
+                          title={
+                            actualRenderDuration !== null
+                              ? "Actual rendered video duration"
+                              : "Actual generated voiceover audio duration"
+                          }
+                        >
+                          <span className="text-emerald-500 text-[10px] uppercase font-bold">
+                            {actualRenderDuration !== null ? "Rendered Video:" : "Voiceover Audio:"}
+                          </span>
+                          <span className="font-mono">
+                            {(actualRenderDuration ?? actualVoiceoverDuration)?.toFixed(1)}s
+                          </span>
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Completed Video Actions in Header */}
@@ -666,6 +802,8 @@ function VideoDetailContent({ videoId }: { videoId: string }) {
                   videoId={videoId}
                   topic={video.topic}
                   visualStyleSnapshot={video.visual_style_snapshot}
+                  durationMode={video.duration_mode}
+                  targetDuration={video.target_duration}
                   onRerun={async (stepName, prompt) => {
                     await rerunMutation.mutateAsync({ stepName, prompt });
                   }}
